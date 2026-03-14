@@ -12,6 +12,10 @@ type GameState = {
   discard: CardDefinition[];
 };
 
+type PendingAction =
+  | { kind: 'merchant' }
+  | null;
+
 function buildInitialDeck(): CardDefinition[] {
   const deck: CardDefinition[] = [];
 
@@ -33,6 +37,7 @@ function buildInitialDeck(): CardDefinition[] {
 export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
@@ -46,6 +51,45 @@ export default function App() {
       return { deck, hand, discard: [] };
     });
     setScreen('game');
+  };
+
+  const resolveMerchant = (index: number) => {
+    setGameState((prev) => {
+      if (index < 0 || index >= prev.hand.length) return prev;
+      const nextHand = [...prev.hand];
+      const [chosen] = nextHand.splice(index, 1);
+      return {
+        deck: [chosen, ...prev.deck],
+        hand: nextHand,
+        discard: prev.discard,
+      };
+    });
+    setPendingAction(null);
+  };
+
+  const confirmUseSelected = () => {
+    if (selectedIndex === null) return;
+    const card = gameState.hand[selectedIndex];
+    if (!card) return;
+
+    if (card.no === 2) {
+      // 商人の効果：自身を捨て札に送り、手札から1枚を山札の一番上に戻す
+      setGameState((prev) => {
+        if (selectedIndex < 0 || selectedIndex >= prev.hand.length) return prev;
+        const nextHand = [...prev.hand];
+        const [merchant] = nextHand.splice(selectedIndex, 1);
+        return {
+          deck: prev.deck,
+          hand: nextHand,
+          discard: [...prev.discard, merchant],
+        };
+      });
+      setSelectedIndex(null);
+      setPendingAction({ kind: 'merchant' });
+      return;
+    }
+
+    playFromHand(selectedIndex);
   };
 
   const drawOne = () => {
@@ -196,10 +240,25 @@ export default function App() {
                 // 同名カードもあり得るので index をキーに含める
                 key={`${card.no}-${index}`}
                 card={card}
-                onClick={() => setSelectedIndex(index)}
+                onClick={() =>
+                  pendingAction?.kind === 'merchant'
+                    ? resolveMerchant(index)
+                    : setSelectedIndex(index)
+                }
               />
             ))}
           </div>
+          {pendingAction?.kind === 'merchant' && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                fontSize: '0.85rem',
+                opacity: 0.9,
+              }}
+            >
+              商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
+            </div>
+          )}
           {selectedIndex !== null && gameState.hand[selectedIndex] && (
             <div
               style={{
@@ -248,7 +307,7 @@ export default function App() {
                     opacity: 0.9,
                   }}
                 >
-                  このカードを使用すると、現在は「捨て札に送る」だけの仮実装です。
+                  このカードを使用すると、カードごとの効果（商人は手札1枚を山札の上に戻す）が順次適用されます。
                 </p>
                 <div
                   style={{
@@ -275,7 +334,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => playFromHand(selectedIndex)}
+                    onClick={confirmUseSelected}
                     style={{
                       borderRadius: 999,
                       border: '1px solid rgba(255, 255, 255, 0.8)',
