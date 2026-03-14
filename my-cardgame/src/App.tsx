@@ -1,18 +1,64 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
-import { cards } from './cards';
+import { cards, type CardDefinition } from './cards';
 import { CardView } from './CardView';
 
 type Screen = 'title' | 'game';
 
+type GameState = {
+  deck: CardDefinition[];
+  hand: CardDefinition[];
+};
+
+function buildInitialDeck(): CardDefinition[] {
+  const deck: CardDefinition[] = [];
+
+  cards.forEach((card) => {
+    for (let i = 0; i < card.count; i += 1) {
+      deck.push(card);
+    }
+  });
+
+  // Fisher–Yates shuffle
+  for (let i = deck.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  return deck;
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const deck = buildInitialDeck();
+    const hand = deck.splice(0, 2);
+    return { deck, hand };
+  });
 
-  const initialHand = useMemo(
-    () => [cards[0], cards[1], cards[2], cards[3]],
-    [],
-  );
+  const startGame = () => {
+    setGameState(() => {
+      const deck = buildInitialDeck();
+      const hand = deck.splice(0, 2);
+      return { deck, hand };
+    });
+    setScreen('game');
+  };
+
+  const drawOne = () => {
+    setGameState((prev) => {
+      if (prev.deck.length === 0 || prev.hand.length >= 4) {
+        return prev;
+      }
+
+      const [top, ...rest] = prev.deck;
+      return {
+        deck: rest,
+        hand: [...prev.hand, top],
+      };
+    });
+  };
 
   if (screen === 'game') {
     return (
@@ -63,17 +109,50 @@ export default function App() {
             flex: '1 1 auto',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'flex-end',
-            padding: '2rem',
+            justifyContent: 'space-between',
+            padding: '2rem 2rem 1.5rem',
           }}
         >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+              fontSize: '1rem',
+            }}
+          >
+            <div>山札: {gameState.deck.length} 枚</div>
+            <button
+              type="button"
+              onClick={drawOne}
+              disabled={gameState.deck.length === 0 || gameState.hand.length >= 4}
+              style={{
+                borderRadius: 999,
+                border: '1px solid rgba(255, 255, 255, 0.7)',
+                background:
+                  gameState.deck.length === 0 || gameState.hand.length >= 4
+                    ? 'rgba(0, 0, 0, 0.3)'
+                    : 'rgba(0, 0, 0, 0.7)',
+                color: '#fff',
+                padding: '0.5rem 1.2rem',
+                cursor:
+                  gameState.deck.length === 0 || gameState.hand.length >= 4
+                    ? 'default'
+                    : 'pointer',
+                fontSize: '0.9rem',
+              }}
+            >
+              Draw
+            </button>
+          </div>
           <div
             style={{
               marginBottom: '1rem',
               fontSize: '1.1rem',
             }}
           >
-            手札（仮表示）
+            手札（{gameState.hand.length} / 4 枚）
           </div>
           <div
             style={{
@@ -81,7 +160,7 @@ export default function App() {
               gap: '1rem',
             }}
           >
-            {initialHand.map((card) => (
+            {gameState.hand.map((card) => (
               <CardView key={card.no} card={card} />
             ))}
           </div>
@@ -124,7 +203,7 @@ export default function App() {
         </h1>
         <button
           type="button"
-          onClick={() => setScreen('game')}
+          onClick={startGame}
           style={{
             border: 'none',
             padding: 0,
