@@ -1,6 +1,6 @@
-import React from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
+import { cards } from './cards';
 
 export default function App() {
   return (
@@ -76,6 +76,51 @@ export default function App() {
             </span>
           </div>
         </button>
+        <div
+          style={{
+            marginTop: '3rem',
+            padding: '1.5rem 2rem',
+            maxHeight: '40vh',
+            overflowY: 'auto',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            borderRadius: '12px',
+            fontSize: '0.9rem',
+          }}
+        >
+          <h2
+            style={{
+              marginTop: 0,
+              marginBottom: '1rem',
+              fontSize: '1.2rem',
+            }}
+          >
+            カード一覧（暫定表示）
+          </h2>
+          <ul
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              textAlign: 'left',
+            }}
+          >
+            {cards.map((card) => (
+              <li
+                key={card.no}
+                style={{
+                  marginBottom: '0.5rem',
+                }}
+              >
+                <strong>
+                  No.{card.no} {card.name}
+                </strong>{' '}
+                ×{card.count}（Type:
+                {card.type === 'attack' ? '攻撃' : 'その他'} / 強制発動:
+                {card.forcedActivation}） - {card.effectSummary}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
