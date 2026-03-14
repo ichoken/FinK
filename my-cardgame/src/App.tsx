@@ -10,6 +10,7 @@ type GameState = {
   deck: CardDefinition[];
   hand: CardDefinition[];
   discard: CardDefinition[];
+  log: string[];
 };
 
 type PendingAction =
@@ -41,14 +42,24 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
-    return { deck, hand, discard: [] };
+    return {
+      deck,
+      hand,
+      discard: [],
+      log: ['ゲーム開始前の状態です。'],
+    };
   });
 
   const startGame = () => {
     setGameState(() => {
       const deck = buildInitialDeck();
       const hand = deck.splice(0, 2);
-      return { deck, hand, discard: [] };
+      return {
+        deck,
+        hand,
+        discard: [],
+        log: ['新しいゲームを開始しました。初期手札を2枚配りました。'],
+      };
     });
     setScreen('game');
   };
@@ -62,6 +73,10 @@ export default function App() {
         deck: [chosen, ...prev.deck],
         hand: nextHand,
         discard: prev.discard,
+        log: [
+          ...prev.log,
+          `商人の効果でカードを山札の一番上に戻しました。（${chosen.name}）`,
+        ],
       };
     });
     setPendingAction(null);
@@ -82,6 +97,7 @@ export default function App() {
           deck: prev.deck,
           hand: nextHand,
           discard: [...prev.discard, merchant],
+          log: [...prev.log, '商人を使用しました。手札から1枚を山札の上に戻します。'],
         };
       });
       setSelectedIndex(null);
@@ -103,6 +119,7 @@ export default function App() {
         deck: rest,
         hand: [...prev.hand, top],
         discard: prev.discard,
+        log: [...prev.log, `カードを1枚ドローしました。（${top.name}）`],
       };
     });
   };
@@ -121,6 +138,10 @@ export default function App() {
         deck: nextDeck,
         hand: [...prev.hand, picked],
         discard: prev.discard,
+        log: [
+          ...prev.log,
+          `デバッグ: 特定のカードを手札に追加しました。（No.${picked.no} ${picked.name}）`,
+        ],
       };
     });
   };
@@ -134,6 +155,7 @@ export default function App() {
         deck: prev.deck,
         hand: nextHand,
         discard: [...prev.discard, played],
+        log: [...prev.log, `カードを使用しました。（${played.name}）`],
       };
     });
 
@@ -325,6 +347,37 @@ export default function App() {
               商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
             </div>
           )}
+          <div
+            style={{
+              marginTop: '1rem',
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              borderRadius: 12,
+              maxHeight: '25vh',
+              overflowY: 'auto',
+              fontSize: '0.8rem',
+            }}
+          >
+            <div
+              style={{
+                marginBottom: '0.4rem',
+                fontWeight: 600,
+              }}
+            >
+              ログ
+            </div>
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+              }}
+            >
+              {gameState.log.map((entry, index) => (
+                <li key={`log-${index}`}>{entry}</li>
+              ))}
+            </ul>
+          </div>
           {selectedIndex !== null && gameState.hand[selectedIndex] && (
             <div
               style={{
