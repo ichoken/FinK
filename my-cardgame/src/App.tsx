@@ -1,9 +1,95 @@
+import { useMemo, useState } from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards } from './cards';
 import { CardView } from './CardView';
 
+type Screen = 'title' | 'game';
+
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('title');
+
+  const initialHand = useMemo(
+    () => [cards[0], cards[1], cards[2], cards[3]],
+    [],
+  );
+
+  if (screen === 'game') {
+    return (
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundImage: `url(${titleImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          color: '#ffffff',
+          textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
+        }}
+      >
+        <header
+          style={{
+            padding: '1rem 2rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>FinK</div>
+          <button
+            type="button"
+            onClick={() => setScreen('title')}
+            style={{
+              borderRadius: 999,
+              border: '1px solid rgba(255, 255, 255, 0.6)',
+              background: 'rgba(0, 0, 0, 0.5)',
+              color: '#fff',
+              padding: '0.4rem 0.9rem',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+            }}
+          >
+            Back to title
+          </button>
+        </header>
+
+        <main
+          style={{
+            flex: '1 1 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: '2rem',
+          }}
+        >
+          <div
+            style={{
+              marginBottom: '1rem',
+              fontSize: '1.1rem',
+            }}
+          >
+            手札（仮表示）
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem',
+            }}
+          >
+            {initialHand.map((card) => (
+              <CardView key={card.no} card={card} />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -38,6 +124,7 @@ export default function App() {
         </h1>
         <button
           type="button"
+          onClick={() => setScreen('game')}
           style={{
             border: 'none',
             padding: 0,
@@ -77,60 +164,6 @@ export default function App() {
             </span>
           </div>
         </button>
-        <div
-          style={{
-            marginTop: '1.5rem',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <CardView card={cards[0]} />
-        </div>
-        <div
-          style={{
-            marginTop: '2.5rem',
-            padding: '1.5rem 2rem',
-            maxHeight: '40vh',
-            overflowY: 'auto',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            borderRadius: '12px',
-            fontSize: '0.9rem',
-          }}
-        >
-          <h2
-            style={{
-              marginTop: 0,
-              marginBottom: '1rem',
-              fontSize: '1.2rem',
-            }}
-          >
-            カード一覧（暫定表示）
-          </h2>
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-              textAlign: 'left',
-            }}
-          >
-            {cards.map((card) => (
-              <li
-                key={card.no}
-                style={{
-                  marginBottom: '0.5rem',
-                }}
-              >
-                <strong>
-                  No.{card.no} {card.name}
-                </strong>{' '}
-                ×{card.count}（Type:
-                {card.type === 'attack' ? '攻撃' : 'その他'} / 強制発動:
-                {card.forcedActivation}） - {card.effectSummary}
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );
