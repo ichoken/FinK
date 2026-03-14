@@ -1,6 +1,7 @@
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards } from './cards';
+import { CardView } from './CardView';
 
 export default function App() {
   return (
@@ -78,7 +79,16 @@ export default function App() {
         </button>
         <div
           style={{
-            marginTop: '3rem',
+            marginTop: '1.5rem',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <CardView card={cards[0]} />
+        </div>
+        <div
+          style={{
+            marginTop: '2.5rem',
             padding: '1.5rem 2rem',
             maxHeight: '40vh',
             overflowY: 'auto',
