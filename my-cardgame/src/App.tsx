@@ -105,6 +105,30 @@ export default function App() {
       return;
     }
 
+    if (card.no === 6) {
+      // 黒魔術師の効果：自分の手札と山札をすべてシャッフルして新たな山札にする
+      setGameState((prev) => {
+        if (selectedIndex < 0 || selectedIndex >= prev.hand.length) return prev;
+
+        const pool: CardDefinition[] = [...prev.hand, ...prev.deck];
+
+        for (let i = pool.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+
+        return {
+          deck: pool,
+          hand: [],
+          discard: prev.discard,
+          log: [...prev.log, '黒魔術師を使用しました。手札と山札をすべてシャッフルしました。'],
+        };
+      });
+
+      setSelectedIndex(null);
+      return;
+    }
+
     playFromHand(selectedIndex);
   };
 
@@ -426,7 +450,7 @@ export default function App() {
                     opacity: 0.9,
                   }}
                 >
-                  このカードを使用すると、カードごとの効果（商人は手札1枚を山札の上に戻す）が順次適用されます。
+                  このカードを使用すると、カードごとの効果（例: 商人は手札1枚を山札の上に戻す／黒魔術師は手札と山札をシャッフル）を順次適用します。
                 </p>
                 <div
                   style={{
