@@ -3,6 +3,7 @@ import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards, type CardDefinition } from './cards';
 import { CardView } from './CardView';
+import { createDefaultPlayers, type PlayerInfo } from './gameConfig';
 
 type Screen = 'title' | 'game';
 
@@ -39,6 +40,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [players] = useState<PlayerInfo[]>(() => createDefaultPlayers());
+  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
@@ -212,22 +215,60 @@ export default function App() {
             alignItems: 'center',
           }}
         >
-          <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>FinK</div>
-          <button
-            type="button"
-            onClick={() => setScreen('title')}
+          <div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>FinK</div>
+            <div
+              style={{
+                marginTop: '0.25rem',
+                fontSize: '0.85rem',
+                opacity: 0.9,
+              }}
+            >
+              現在の手番:{' '}
+              {players[activePlayerIndex]?.name}{' '}
+              {players[activePlayerIndex]?.kind === 'human' ? '(あなた)' : '(CPU)'}
+            </div>
+          </div>
+          <div
             style={{
-              borderRadius: 999,
-              border: '1px solid rgba(255, 255, 255, 0.6)',
-              background: 'rgba(0, 0, 0, 0.5)',
-              color: '#fff',
-              padding: '0.4rem 0.9rem',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
             }}
           >
-            Back to title
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                setActivePlayerIndex((prev) => (prev + 1) % players.length)
+              }
+              style={{
+                borderRadius: 999,
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+                background: 'rgba(0, 0, 0, 0.5)',
+                color: '#fff',
+                padding: '0.4rem 0.9rem',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              Next player
+            </button>
+            <button
+              type="button"
+              onClick={() => setScreen('title')}
+              style={{
+                borderRadius: 999,
+                border: '1px solid rgba(255, 255, 255, 0.6)',
+                background: 'rgba(0, 0, 0, 0.5)',
+                color: '#fff',
+                padding: '0.4rem 0.9rem',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              Back to title
+            </button>
+          </div>
         </header>
 
         <main
