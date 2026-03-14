@@ -32,6 +32,7 @@ function buildInitialDeck(): CardDefinition[] {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
@@ -73,6 +74,8 @@ export default function App() {
         discard: [...prev.discard, played],
       };
     });
+
+    setSelectedIndex(null);
   };
 
   if (screen === 'game') {
@@ -193,10 +196,104 @@ export default function App() {
                 // 同名カードもあり得るので index をキーに含める
                 key={`${card.no}-${index}`}
                 card={card}
-                onClick={() => playFromHand(index)}
+                onClick={() => setSelectedIndex(index)}
               />
             ))}
           </div>
+          {selectedIndex !== null && gameState.hand[selectedIndex] && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                zIndex: 10,
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: 'rgba(10, 10, 25, 0.95)',
+                  borderRadius: 16,
+                  padding: '1.5rem 2rem',
+                  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.9)',
+                  maxWidth: 600,
+                  width: '90%',
+                }}
+              >
+                <h2
+                  style={{
+                    marginTop: 0,
+                    marginBottom: '0.75rem',
+                    fontSize: '1.4rem',
+                  }}
+                >
+                  {gameState.hand[selectedIndex].name}
+                </h2>
+                <p
+                  style={{
+                    marginTop: 0,
+                    marginBottom: '0.5rem',
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  効果: {gameState.hand[selectedIndex].effectSummary}
+                </p>
+                <p
+                  style={{
+                    marginTop: 0,
+                    marginBottom: '1rem',
+                    fontSize: '0.85rem',
+                    opacity: 0.9,
+                  }}
+                >
+                  このカードを使用すると、現在は「捨て札に送る」だけの仮実装です。
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '0.75rem',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIndex(null)}
+                    style={{
+                      borderRadius: 999,
+                      border: '1px solid rgba(255, 255, 255, 0.5)',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      color: '#fff',
+                      padding: '0.45rem 1.1rem',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playFromHand(selectedIndex)}
+                    style={{
+                      borderRadius: 999,
+                      border: '1px solid rgba(255, 255, 255, 0.8)',
+                      background:
+                        'linear-gradient(135deg, #f97316, #fb923c, #fed7aa)',
+                      color: '#000',
+                      padding: '0.45rem 1.4rem',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Use this card
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     );
