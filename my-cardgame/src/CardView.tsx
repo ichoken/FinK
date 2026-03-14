@@ -2,9 +2,10 @@ import type { CardDefinition } from './cards';
 
 interface CardViewProps {
   card: CardDefinition;
+  onClick?: () => void;
 }
 
-export function CardView({ card }: CardViewProps) {
+export function CardView({ card, onClick }: CardViewProps) {
   const isAttack = card.type === 'attack';
   const forced =
     card.forcedActivation === 'ON'
@@ -28,7 +29,11 @@ export function CardView({ card }: CardViewProps) {
         color: '#fff',
         display: 'flex',
         flexDirection: 'column',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: onClick ? 'translateY(0)' : undefined,
+        transition: 'transform 0.1s ease-out, box-shadow 0.1s ease-out',
       }}
+      onClick={onClick}
     >
       <div
         style={{

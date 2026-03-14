@@ -9,6 +9,7 @@ type Screen = 'title' | 'game';
 type GameState = {
   deck: CardDefinition[];
   hand: CardDefinition[];
+  discard: CardDefinition[];
 };
 
 function buildInitialDeck(): CardDefinition[] {
@@ -34,14 +35,14 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
-    return { deck, hand };
+    return { deck, hand, discard: [] };
   });
 
   const startGame = () => {
     setGameState(() => {
       const deck = buildInitialDeck();
       const hand = deck.splice(0, 2);
-      return { deck, hand };
+      return { deck, hand, discard: [] };
     });
     setScreen('game');
   };
@@ -56,6 +57,20 @@ export default function App() {
       return {
         deck: rest,
         hand: [...prev.hand, top],
+        discard: prev.discard,
+      };
+    });
+  };
+
+  const playFromHand = (index: number) => {
+    setGameState((prev) => {
+      if (index < 0 || index >= prev.hand.length) return prev;
+      const nextHand = [...prev.hand];
+      const [played] = nextHand.splice(index, 1);
+      return {
+        deck: prev.deck,
+        hand: nextHand,
+        discard: [...prev.discard, played],
       };
     });
   };
@@ -149,6 +164,19 @@ export default function App() {
           <div
             style={{
               marginBottom: '1rem',
+              fontSize: '0.9rem',
+            }}
+          >
+            捨て札: {gameState.discard.length} 枚
+            {gameState.discard.length > 0 && (
+              <span style={{ marginLeft: '0.5rem', opacity: 0.9 }}>
+                （最後に使用: {gameState.discard[gameState.discard.length - 1].name}）
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              marginBottom: '1rem',
               fontSize: '1.1rem',
             }}
           >
@@ -160,8 +188,13 @@ export default function App() {
               gap: '1rem',
             }}
           >
-            {gameState.hand.map((card) => (
-              <CardView key={card.no} card={card} />
+            {gameState.hand.map((card, index) => (
+              <CardView
+                // 同名カードもあり得るので index をキーに含める
+                key={`${card.no}-${index}`}
+                card={card}
+                onClick={() => playFromHand(index)}
+              />
             ))}
           </div>
         </main>
