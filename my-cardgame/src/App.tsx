@@ -107,6 +107,24 @@ export default function App() {
     });
   };
 
+  const debugDrawSpecific = (cardNo: number) => {
+    setGameState((prev) => {
+      if (prev.hand.length >= 4) return prev;
+
+      const indexInDeck = prev.deck.findIndex((c) => c.no === cardNo);
+      if (indexInDeck === -1) return prev;
+
+      const nextDeck = [...prev.deck];
+      const [picked] = nextDeck.splice(indexInDeck, 1);
+
+      return {
+        deck: nextDeck,
+        hand: [...prev.hand, picked],
+        discard: prev.discard,
+      };
+    });
+  };
+
   const playFromHand = (index: number) => {
     setGameState((prev) => {
       if (index < 0 || index >= prev.hand.length) return prev;
@@ -220,6 +238,54 @@ export default function App() {
                 （最後に使用: {gameState.discard[gameState.discard.length - 1].name}）
               </span>
             )}
+          </div>
+          <div
+            style={{
+              marginBottom: '1rem',
+              fontSize: '0.85rem',
+              opacity: 0.9,
+            }}
+          >
+            デバッグ: 任意のカードを手札に追加
+            <div
+              style={{
+                marginTop: '0.4rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.4rem',
+              }}
+            >
+              {cards.map((card) => (
+                <button
+                  key={`debug-${card.no}`}
+                  type="button"
+                  onClick={() => debugDrawSpecific(card.no)}
+                  disabled={
+                    gameState.hand.length >= 4 ||
+                    !gameState.deck.some((c) => c.no === card.no)
+                  }
+                  style={{
+                    borderRadius: 999,
+                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                    background:
+                      gameState.hand.length >= 4 ||
+                      !gameState.deck.some((c) => c.no === card.no)
+                        ? 'rgba(0, 0, 0, 0.3)'
+                        : 'rgba(0, 0, 0, 0.7)',
+                    color: '#fff',
+                    padding: '0.25rem 0.7rem',
+                    fontSize: '0.75rem',
+                    cursor:
+                      gameState.hand.length >= 4 ||
+                      !gameState.deck.some((c) => c.no === card.no)
+                        ? 'default'
+                        : 'pointer',
+                  }}
+                >
+                  {card.no}. {card.name}
+                </button>
+              ))}
+            </div>
           </div>
           <div
             style={{
