@@ -42,6 +42,8 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [players] = useState<PlayerInfo[]>(() => createDefaultPlayers());
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+  const isHumanTurn =
+    players[activePlayerIndex]?.kind === 'human';
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hand = deck.splice(0, 2);
@@ -293,18 +295,26 @@ export default function App() {
             <button
               type="button"
               onClick={drawOne}
-              disabled={gameState.deck.length === 0 || gameState.hand.length >= 4}
+              disabled={
+                !isHumanTurn ||
+                gameState.deck.length === 0 ||
+                gameState.hand.length >= 4
+              }
               style={{
                 borderRadius: 999,
                 border: '1px solid rgba(255, 255, 255, 0.7)',
                 background:
-                  gameState.deck.length === 0 || gameState.hand.length >= 4
+                  !isHumanTurn ||
+                  gameState.deck.length === 0 ||
+                  gameState.hand.length >= 4
                     ? 'rgba(0, 0, 0, 0.3)'
                     : 'rgba(0, 0, 0, 0.7)',
                 color: '#fff',
                 padding: '0.5rem 1.2rem',
                 cursor:
-                  gameState.deck.length === 0 || gameState.hand.length >= 4
+                  !isHumanTurn ||
+                  gameState.deck.length === 0 ||
+                  gameState.hand.length >= 4
                     ? 'default'
                     : 'pointer',
                 fontSize: '0.9rem',
@@ -348,6 +358,7 @@ export default function App() {
                   type="button"
                   onClick={() => debugDrawSpecific(card.no)}
                   disabled={
+                    !isHumanTurn ||
                     gameState.hand.length >= 4 ||
                     !gameState.deck.some((c) => c.no === card.no)
                   }
@@ -355,6 +366,7 @@ export default function App() {
                     borderRadius: 999,
                     border: '1px solid rgba(255, 255, 255, 0.4)',
                     background:
+                      !isHumanTurn ||
                       gameState.hand.length >= 4 ||
                       !gameState.deck.some((c) => c.no === card.no)
                         ? 'rgba(0, 0, 0, 0.3)'
@@ -363,6 +375,7 @@ export default function App() {
                     padding: '0.25rem 0.7rem',
                     fontSize: '0.75rem',
                     cursor:
+                      !isHumanTurn ||
                       gameState.hand.length >= 4 ||
                       !gameState.deck.some((c) => c.no === card.no)
                         ? 'default'
@@ -393,10 +406,13 @@ export default function App() {
                 // 同名カードもあり得るので index をキーに含める
                 key={`${card.no}-${index}`}
                 card={card}
-                onClick={() =>
-                  pendingAction?.kind === 'merchant'
-                    ? resolveMerchant(index)
-                    : setSelectedIndex(index)
+                onClick={
+                  !isHumanTurn
+                    ? undefined
+                    : () =>
+                        pendingAction?.kind === 'merchant'
+                          ? resolveMerchant(index)
+                          : setSelectedIndex(index)
                 }
               />
             ))}
@@ -410,6 +426,17 @@ export default function App() {
               }}
             >
               商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
+            </div>
+          )}
+          {!isHumanTurn && (
+            <div
+              style={{
+                marginTop: '0.5rem',
+                fontSize: '0.85rem',
+                opacity: 0.85,
+              }}
+            >
+              現在はCPUの手番です。操作は無効化されています。（デバッグ用に「Next player」で順番を進められます）
             </div>
           )}
           <div
