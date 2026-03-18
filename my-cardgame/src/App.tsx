@@ -2,8 +2,8 @@ import { useState } from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards, type CardDefinition } from './cards';
-import { CardView } from './CardView';
 import { createDefaultPlayers, type PlayerInfo } from './gameConfig';
+import { HandView } from './HandView';
 
 type Screen = 'title' | 'game';
 
@@ -382,25 +382,11 @@ export default function App() {
           >
             手札（{gameState.hand.length} / 4 枚）
           </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-            }}
-          >
-            {gameState.hand.map((card, index) => (
-              <CardView
-                // 同名カードもあり得るので index をキーに含める
-                key={`${card.no}-${index}`}
-                card={card}
-                onClick={() =>
-                  pendingAction?.kind === 'merchant'
-                    ? resolveMerchant(index)
-                    : setSelectedIndex(index)
-                }
-              />
-            ))}
-          </div>
+          <HandView
+            hand={gameState.hand}
+            selectedIndex={selectedIndex}
+            onSelect={setSelectedIndex}
+          />
           {pendingAction?.kind === 'merchant' && (
             <div
               style={{
