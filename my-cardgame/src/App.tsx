@@ -67,6 +67,10 @@ export default function App() {
     setScreen('game');
   };
 
+  const handleSelect = (index: number) => {
+    setSelectedIndex(index);
+  };
+
   const resolveMerchant = (index: number) => {
     setGameState((prev) => {
       if (index < 0 || index >= prev.hand.length) return prev;
@@ -290,28 +294,6 @@ export default function App() {
             }}
           >
             <div>山札: {gameState.deck.length} 枚</div>
-            <button
-              type="button"
-              onClick={drawOne}
-              disabled={gameState.deck.length === 0 || gameState.hand.length >= 4}
-              style={{
-                borderRadius: 999,
-                border: '1px solid rgba(255, 255, 255, 0.7)',
-                background:
-                  gameState.deck.length === 0 || gameState.hand.length >= 4
-                    ? 'rgba(0, 0, 0, 0.3)'
-                    : 'rgba(0, 0, 0, 0.7)',
-                color: '#fff',
-                padding: '0.5rem 1.2rem',
-                cursor:
-                  gameState.deck.length === 0 || gameState.hand.length >= 4
-                    ? 'default'
-                    : 'pointer',
-                fontSize: '0.9rem',
-              }}
-            >
-              Draw
-            </button>
           </div>
           <div
             style={{
@@ -382,11 +364,7 @@ export default function App() {
           >
             手札（{gameState.hand.length} / 4 枚）
           </div>
-          <HandView
-            hand={gameState.hand}
-            selectedIndex={selectedIndex}
-            onSelect={setSelectedIndex}
-          />
+          <HandView hand={gameState.hand} selectedIndex={selectedIndex} onSelect={handleSelect} onDraw={drawOne} />
           {pendingAction?.kind === 'merchant' && (
             <div
               style={{

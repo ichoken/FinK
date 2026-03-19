@@ -1,13 +1,10 @@
-export type CardType = 'attack' | 'other';
-
-export type ForcedActivation = 'ON' | 'OFF' | 'NONE';
+export type CardType = 'attack' | 'other' | 'force' | 'draw';
 
 export interface CardDefinition {
   no: number;
   name: string;
   count: number;
   type: CardType;
-  forcedActivation: ForcedActivation;
   effectSummary: string;
 }
 
@@ -17,7 +14,6 @@ export const cards: CardDefinition[] = [
     name: '預言者',
     count: 4,
     type: 'other',
-    forcedActivation: 'OFF',
     effectSummary: '山札の上から4枚を見て、任意の順番で戻す。',
   },
   {
@@ -25,7 +21,6 @@ export const cards: CardDefinition[] = [
     name: '商人',
     count: 2,
     type: 'other',
-    forcedActivation: 'OFF',
     effectSummary: '手札から1枚を選び、山札の一番上に戻す。',
   },
   {
@@ -33,7 +28,6 @@ export const cards: CardDefinition[] = [
     name: '手品師',
     count: 4,
     type: 'attack',
-    forcedActivation: 'OFF',
     effectSummary: '指定した相手とカードを1枚ずつ交換する。',
   },
   {
@@ -41,7 +35,6 @@ export const cards: CardDefinition[] = [
     name: 'シーフ',
     count: 4,
     type: 'attack',
-    forcedActivation: 'OFF',
     effectSummary: '指定した相手の手札から1枚を奪う。',
   },
   {
@@ -49,7 +42,6 @@ export const cards: CardDefinition[] = [
     name: '占い師',
     count: 4,
     type: 'attack',
-    forcedActivation: 'OFF',
     effectSummary: '指定した相手の手札をすべて確認する。',
   },
   {
@@ -57,7 +49,6 @@ export const cards: CardDefinition[] = [
     name: '黒魔術師',
     count: 1,
     type: 'other',
-    forcedActivation: 'OFF',
     effectSummary: '自分の手札と山札をすべてシャッフルして新たな山札にする。',
   },
   {
@@ -65,7 +56,6 @@ export const cards: CardDefinition[] = [
     name: 'シスター',
     count: 4,
     type: 'other',
-    forcedActivation: 'OFF',
     effectSummary: '攻撃カードの対象になったとき、その攻撃を無効化しこのカードを破棄する。',
   },
   {
@@ -73,7 +63,6 @@ export const cards: CardDefinition[] = [
     name: '天使',
     count: 2,
     type: 'other',
-    forcedActivation: 'OFF',
     effectSummary: '墓地から任意のカード1枚を選び、発動または手札に加える。',
   },
   {
@@ -81,23 +70,20 @@ export const cards: CardDefinition[] = [
     name: '催眠術師',
     count: 4,
     type: 'attack',
-    forcedActivation: 'OFF',
     effectSummary: '指定した相手の手札から1枚を選び、そのカードを強制的に発動させる。',
   },
   {
     no: 10,
     name: '差し押さえ',
     count: 2,
-    type: 'other',
-    forcedActivation: 'ON',
+    type: 'force',
     effectSummary: '自分の手札1枚を選び、手札4枚未満の相手1人に譲渡する。',
   },
   {
     no: 11,
     name: '混乱',
     count: 2,
-    type: 'other',
-    forcedActivation: 'ON',
+    type: 'force',
     effectSummary: '自分の手札をすべて公開する。',
   },
   {
@@ -105,7 +91,6 @@ export const cards: CardDefinition[] = [
     name: 'FinK',
     count: 1,
     type: 'other',
-    forcedActivation: 'NONE',
     effectSummary: '使用すると自分は敗北。山札0枚時に所持していると勝利する。',
   },
 ];
