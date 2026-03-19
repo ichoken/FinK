@@ -4,6 +4,9 @@ import mainBtnImage from '../resource/mainBtn.png';
 import { cards, type CardDefinition } from './cards';
 import { createDefaultPlayers, type PlayerInfo } from './gameConfig';
 import { HandView } from './HandView';
+import { Header } from './Header';
+import { LogView } from './LogView';
+
 
 type Screen = 'title' | 'game';
 
@@ -211,69 +214,12 @@ export default function App() {
           textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
         }}
       >
-        <header
-          style={{
-            padding: '1rem 2rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>FinK</div>
-            <div
-              style={{
-                marginTop: '0.25rem',
-                fontSize: '0.85rem',
-                opacity: 0.9,
-              }}
-            >
-              現在の手番:{' '}
-              {players[activePlayerIndex]?.name}{' '}
-              {players[activePlayerIndex]?.kind === 'human' ? '(あなた)' : '(CPU)'}
-            </div>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              alignItems: 'center',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() =>
-                setActivePlayerIndex((prev) => (prev + 1) % players.length)
-              }
-              style={{
-                borderRadius: 999,
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-                background: 'rgba(0, 0, 0, 0.5)',
-                color: '#fff',
-                padding: '0.4rem 0.9rem',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-              }}
-            >
-              Next player
-            </button>
-            <button
-              type="button"
-              onClick={() => setScreen('title')}
-              style={{
-                borderRadius: 999,
-                border: '1px solid rgba(255, 255, 255, 0.6)',
-                background: 'rgba(0, 0, 0, 0.5)',
-                color: '#fff',
-                padding: '0.4rem 0.9rem',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-              }}
-            >
-              Back to title
-            </button>
-          </div>
-        </header>
+        <Header
+          players={players}
+          activePlayerIndex={activePlayerIndex}
+          onNextPlayer={() => setActivePlayerIndex((prev) => (prev + 1) % players.length)}
+          onBackToTitle={() => setScreen('title')}
+        />
 
         <main
           style={{
@@ -376,37 +322,7 @@ export default function App() {
               商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
             </div>
           )}
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              borderRadius: 12,
-              maxHeight: '25vh',
-              overflowY: 'auto',
-              fontSize: '0.8rem',
-            }}
-          >
-            <div
-              style={{
-                marginBottom: '0.4rem',
-                fontWeight: 600,
-              }}
-            >
-              ログ
-            </div>
-            <ul
-              style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: 0,
-              }}
-            >
-              {gameState.log.map((entry, index) => (
-                <li key={`log-${index}`}>{entry}</li>
-              ))}
-            </ul>
-          </div>
+          <LogView log={gameState.log} onClear={() => setGameState(prev => ({ ...prev, log: [] }))} />
           {selectedIndex !== null && gameState.hand[selectedIndex] && (
             <div
               style={{
