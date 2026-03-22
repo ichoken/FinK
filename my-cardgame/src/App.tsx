@@ -7,6 +7,8 @@ import { HandView } from './HandView';
 import { Header } from './Header';
 import { LogView } from './LogView';
 import { DebugControls } from './DebugControls';
+import { DiscardView } from './DiscardView';
+import { DeckView } from './DeckView';
 
 
 type Screen = 'title' | 'game';
@@ -231,30 +233,15 @@ export default function App() {
             padding: '2rem 2rem 1.5rem',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1rem',
-              fontSize: '1rem',
-            }}
-          >
-            <div>山札: {gameState.deck.length} 枚</div>
-          </div>
-          <div
-            style={{
-              marginBottom: '1rem',
-              fontSize: '0.9rem',
-            }}
-          >
-            捨て札: {gameState.discard.length} 枚
-            {gameState.discard.length > 0 && (
-              <span style={{ marginLeft: '0.5rem', opacity: 0.9 }}>
-                （最後に使用: {gameState.discard[gameState.discard.length - 1].name}）
-              </span>
-            )}
-          </div>
+          <DeckView deck={gameState.deck} />
+          <DiscardView
+            discard={gameState.discard}
+            lastDiscard={
+              gameState.discard.length > 0
+                ? gameState.discard[gameState.discard.length - 1]
+                : null
+            }
+          />
           <DebugControls
             cards={cards}
             handLength={gameState.hand.length}
