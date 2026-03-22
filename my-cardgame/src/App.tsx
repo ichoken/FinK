@@ -215,11 +215,11 @@ export default function App() {
                 gameState.discard.length > 0 ? gameState.discard[gameState.discard.length - 1] : null
               }
             />
-              <PlayerListView
-                players={players}
-                activePlayerIndex={activePlayerIndex}
-                humanHandCount={gameState.hands[HUMAN_PLAYER_INDEX].length}
-              />
+            <PlayerListView
+              players={players}
+              activePlayerIndex={activePlayerIndex}
+              hands={gameState.hands}
+            />
           </div>
 
           {/* Center column */}

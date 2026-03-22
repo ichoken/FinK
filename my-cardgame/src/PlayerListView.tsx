@@ -1,14 +1,15 @@
 // src/PlayerListView.tsx
 import React from 'react';
 import type { PlayerInfo } from './gameConfig';
+import type { CardDefinition } from './cards';
 
 type Props = {
   players: PlayerInfo[];
   activePlayerIndex: number;
-  humanHandCount: number;
+  hands: CardDefinition[][];
 };
 
-export function PlayerListView({ players, activePlayerIndex, humanHandCount }: Props) {
+export function PlayerListView({ players, activePlayerIndex, hands }: Props) {
   return (
     <div
       style={{
@@ -21,9 +22,8 @@ export function PlayerListView({ players, activePlayerIndex, humanHandCount }: P
     >
       {players.map((p, index) => {
         const isActive = index === activePlayerIndex;
-        const isHuman = p.kind === 'human';
-        const handCount = isHuman ? humanHandCount : 0; // CPU は今は 0 固定
-        const eliminated = p.isEliminated;
+        const handCount = hands[p.id]?.length ?? 0;
+        const eliminated = (p as any).isEliminated ?? false;
 
         return (
           <div
