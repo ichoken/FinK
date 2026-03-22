@@ -2,7 +2,7 @@ import { useState } from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards, type CardDefinition } from './cards';
-import { createDefaultPlayers, type PlayerInfo } from './gameConfig';
+import { createDefaultPlayers, type PlayerInfo,PLAYER_COUNT,HUMAN_PLAYER_INDEX } from './gameConfig';
 import { HandView } from './HandView';
 import { Header } from './Header';
 import { LogView } from './LogView';
@@ -18,7 +18,7 @@ type Screen = 'title' | 'game';
 
 type GameState = {
   deck: CardDefinition[];
-  hand: CardDefinition[];
+  hands: CardDefinition[][]; // ← 各プレイヤーの手札配列（length = PLAYER_COUNT）
   discard: CardDefinition[];
   log: string[];
 };
@@ -53,154 +53,127 @@ export default function App() {
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
-    const hand = deck.splice(0, 2);
+    const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
+    // 各プレイヤーに2枚ずつ配る（プレイヤー順に配布）
+    for (let p = 0; p < PLAYER_COUNT; p += 1) {
+      for (let i = 0; i < 2; i += 1) {
+        const card = deck.shift();
+        if (card) hands[p].push(card);
+      }
+    }
     return {
       deck,
-      hand,
+      hands,
       discard: [],
       log: ['ゲーム開始前の状態です。'],
     };
-  });
+  });  
 
   const startGame = () => {
     setGameState(() => {
       const deck = buildInitialDeck();
-      const hand = deck.splice(0, 2);
+      const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
+      for (let p = 0; p < PLAYER_COUNT; p += 1) {
+        for (let i = 0; i < 2; i += 1) {
+          const card = deck.shift();
+          if (card) hands[p].push(card);
+        }
+      }
       return {
         deck,
-        hand,
+        hands,
         discard: [],
-        log: ['新しいゲームを開始しました。初期手札を2枚配りました。'],
+        log: ['新しいゲームを開始しました。各プレイヤーに初期手札を2枚配りました。'],
       };
     });
     setScreen('game');
-  };
+    setActivePlayerIndex(0);
+    setSelectedIndex(null);
+  };  
 
   const handleSelect = (index: number) => {
     setSelectedIndex(index);
   };
 
-  const resolveMerchant = (index: number) => {
-    setGameState((prev) => {
-      if (index < 0 || index >= prev.hand.length) return prev;
-      const nextHand = [...prev.hand];
-      const [chosen] = nextHand.splice(index, 1);
-      return {
-        deck: [chosen, ...prev.deck],
-        hand: nextHand,
-        discard: prev.discard,
-        log: [
-          ...prev.log,
-          `商人の効果でカードを山札の一番上に戻しました。（${chosen.name}）`,
-        ],
-      };
-    });
-    setPendingAction(null);
-  };
-
   const confirmUseSelected = () => {
     if (selectedIndex === null) return;
-    const card = gameState.hand[selectedIndex];
+    const card = gameState.hands[activePlayerIndex][selectedIndex];
     if (!card) return;
-
+  
     if (card.no === 2) {
-      // 商人の効果：自身を捨て札に送り、手札から1枚を山札の一番上に戻す
+      // 商人の処理（例）
       setGameState((prev) => {
-        if (selectedIndex < 0 || selectedIndex >= prev.hand.length) return prev;
-        const nextHand = [...prev.hand];
-        const [merchant] = nextHand.splice(selectedIndex, 1);
+        const nextHands = prev.hands.map((h) => [...h]);
+        const [merchant] = nextHands[activePlayerIndex].splice(selectedIndex, 1);
         return {
           deck: prev.deck,
-          hand: nextHand,
+          hands: nextHands,
           discard: [...prev.discard, merchant],
-          log: [...prev.log, '商人を使用しました。手札から1枚を山札の上に戻します。'],
+          log: [...prev.log, `${players[activePlayerIndex].name} が商人を使用しました。`],
         };
       });
       setSelectedIndex(null);
       setPendingAction({ kind: 'merchant' });
       return;
     }
-
-    if (card.no === 6) {
-      // 黒魔術師の効果：自分の手札と山札をすべてシャッフルして新たな山札にする
-      setGameState((prev) => {
-        if (selectedIndex < 0 || selectedIndex >= prev.hand.length) return prev;
-
-        const pool: CardDefinition[] = [...prev.hand, ...prev.deck];
-
-        for (let i = pool.length - 1; i > 0; i -= 1) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-
-        return {
-          deck: pool,
-          hand: [],
-          discard: prev.discard,
-          log: [...prev.log, '黒魔術師を使用しました。手札と山札をすべてシャッフルしました。'],
-        };
-      });
-
-      setSelectedIndex(null);
-      return;
-    }
-
+  
+    // 他のカードは playFromHand を呼ぶ
     playFromHand(selectedIndex);
   };
 
   const drawOne = () => {
     setGameState((prev) => {
-      if (prev.deck.length === 0 || prev.hand.length >= 4) {
+      if (prev.deck.length === 0 || prev.hands[activePlayerIndex].length >= 4) {
         return prev;
       }
-
       const [top, ...rest] = prev.deck;
+      const nextHands = prev.hands.map((h) => [...h]);
+      nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], top];
       return {
         deck: rest,
-        hand: [...prev.hand, top],
+        hands: nextHands,
         discard: prev.discard,
-        log: [...prev.log, `カードを1枚ドローしました。（${top.name}）`],
+        log: [...prev.log, `プレイヤー${players[activePlayerIndex].name}がカードを1枚ドローしました。（${top.name}）`],
       };
     });
   };
+  
 
   const debugDrawSpecific = (cardNo: number) => {
     setGameState((prev) => {
-      if (prev.hand.length >= 4) return prev;
-
+      if (prev.hands[activePlayerIndex].length >= 4) return prev;
       const indexInDeck = prev.deck.findIndex((c) => c.no === cardNo);
       if (indexInDeck === -1) return prev;
-
       const nextDeck = [...prev.deck];
       const [picked] = nextDeck.splice(indexInDeck, 1);
-
+      const nextHands = prev.hands.map((h) => [...h]);
+      nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], picked];
       return {
         deck: nextDeck,
-        hand: [...prev.hand, picked],
+        hands: nextHands,
         discard: prev.discard,
-        log: [
-          ...prev.log,
-          `デバッグ: 特定のカードを手札に追加しました。（No.${picked.no} ${picked.name}）`,
-        ],
+        log: [...prev.log, `デバッグ: ${players[activePlayerIndex].name} に No.${picked.no} ${picked.name} を追加しました。`],
       };
     });
   };
+  
 
   const playFromHand = (index: number) => {
     setGameState((prev) => {
-      if (index < 0 || index >= prev.hand.length) return prev;
-      const nextHand = [...prev.hand];
-      const [played] = nextHand.splice(index, 1);
+      const playerHand = prev.hands[activePlayerIndex];
+      if (index < 0 || index >= playerHand.length) return prev;
+      const nextHands = prev.hands.map((h) => [...h]);
+      const [played] = nextHands[activePlayerIndex].splice(index, 1);
       return {
         deck: prev.deck,
-        hand: nextHand,
+        hands: nextHands,
         discard: [...prev.discard, played],
-        log: [...prev.log, `カードを使用しました。（${played.name}）`],
+        log: [...prev.log, `${players[activePlayerIndex].name} がカードを使用しました。（${played.name}）`],
       };
     });
-
     setSelectedIndex(null);
   };
+  
 
   if (screen === 'game') {
   return (
@@ -223,7 +196,10 @@ export default function App() {
       <Header
         players={players}
         activePlayerIndex={activePlayerIndex}
-        onNextPlayer={() => setActivePlayerIndex((prev) => (prev + 1) % players.length)}
+        onNextPlayer={() => {
+          setActivePlayerIndex((prev) => (prev + 1) % players.length);
+          setSelectedIndex(null);
+        }}        
         onBackToTitle={() => setScreen('title')}
       />
 
@@ -239,17 +215,17 @@ export default function App() {
                 gameState.discard.length > 0 ? gameState.discard[gameState.discard.length - 1] : null
               }
             />
-            <PlayerListView
-              players={players}
-              activePlayerIndex={activePlayerIndex}
-              humanHandCount={gameState.hand.length}
-            />
+              <PlayerListView
+                players={players}
+                activePlayerIndex={activePlayerIndex}
+                humanHandCount={gameState.hands[HUMAN_PLAYER_INDEX].length}
+              />
           </div>
 
           {/* Center column */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <HandView
-              hand={gameState.hand}
+              hand={gameState.hands[activePlayerIndex]}
               selectedIndex={selectedIndex}
               onSelect={handleSelect}
               onDraw={drawOne}
@@ -274,7 +250,7 @@ export default function App() {
           <div>
             <DebugControls
               cards={cards}
-              handLength={gameState.hand.length}
+              handLength={gameState.hands[activePlayerIndex].length}
               deck={gameState.deck}
               onDebugDraw={debugDrawSpecific}
             />
@@ -288,7 +264,7 @@ export default function App() {
       </BottomLogArea>
 
       {/* モーダルはルート直下に置く（position: fixed を使っているのでここでOK） */}
-      {selectedIndex !== null && gameState.hand[selectedIndex] && (
+      {selectedIndex !== null && gameState.hands[activePlayerIndex][selectedIndex] && (
         <div
           style={{
             position: 'fixed',
@@ -317,7 +293,7 @@ export default function App() {
                 fontSize: '1.4rem',
               }}
             >
-              {gameState.hand[selectedIndex].name}
+              {gameState.hands[activePlayerIndex][selectedIndex].name}
             </h2>
             <p
               style={{
@@ -326,7 +302,7 @@ export default function App() {
                 fontSize: '0.95rem',
               }}
             >
-              効果: {gameState.hand[selectedIndex].effectSummary}
+              効果: {gameState.hands[activePlayerIndex][selectedIndex].effectSummary}
             </p>
             <p
               style={{
