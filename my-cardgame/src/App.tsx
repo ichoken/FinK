@@ -9,6 +9,7 @@ import { LogView } from './LogView';
 import { DebugControls } from './DebugControls';
 import { DiscardView } from './DiscardView';
 import { DeckView } from './DeckView';
+import { PlayerListView } from './PlayerListView';
 
 
 type Screen = 'title' | 'game';
@@ -248,6 +249,12 @@ export default function App() {
             deck={gameState.deck}
             onDebugDraw={debugDrawSpecific}
           />
+          <PlayerListView
+            players={players}
+            activePlayerIndex={activePlayerIndex}
+            humanHandCount={gameState.hand.length}
+          />
+
           <div
             style={{
               marginBottom: '1rem',
