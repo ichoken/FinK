@@ -6,6 +6,7 @@ import { createDefaultPlayers, type PlayerInfo } from './gameConfig';
 import { HandView } from './HandView';
 import { Header } from './Header';
 import { LogView } from './LogView';
+import { DebugControls } from './DebugControls';
 
 
 type Screen = 'title' | 'game';
@@ -254,54 +255,12 @@ export default function App() {
               </span>
             )}
           </div>
-          <div
-            style={{
-              marginBottom: '1rem',
-              fontSize: '0.85rem',
-              opacity: 0.9,
-            }}
-          >
-            デバッグ: 任意のカードを手札に追加
-            <div
-              style={{
-                marginTop: '0.4rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.4rem',
-              }}
-            >
-              {cards.map((card) => (
-                <button
-                  key={`debug-${card.no}`}
-                  type="button"
-                  onClick={() => debugDrawSpecific(card.no)}
-                  disabled={
-                    gameState.hand.length >= 4 ||
-                    !gameState.deck.some((c) => c.no === card.no)
-                  }
-                  style={{
-                    borderRadius: 999,
-                    border: '1px solid rgba(255, 255, 255, 0.4)',
-                    background:
-                      gameState.hand.length >= 4 ||
-                      !gameState.deck.some((c) => c.no === card.no)
-                        ? 'rgba(0, 0, 0, 0.3)'
-                        : 'rgba(0, 0, 0, 0.7)',
-                    color: '#fff',
-                    padding: '0.25rem 0.7rem',
-                    fontSize: '0.75rem',
-                    cursor:
-                      gameState.hand.length >= 4 ||
-                      !gameState.deck.some((c) => c.no === card.no)
-                        ? 'default'
-                        : 'pointer',
-                  }}
-                >
-                  {card.no}. {card.name}
-                </button>
-              ))}
-            </div>
-          </div>
+          <DebugControls
+            cards={cards}
+            handLength={gameState.hand.length}
+            deck={gameState.deck}
+            onDebugDraw={debugDrawSpecific}
+          />
           <div
             style={{
               marginBottom: '1rem',
