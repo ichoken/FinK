@@ -7,9 +7,10 @@ type Props = {
   handLength: number;
   deck: CardDefinition[];
   onDebugDraw: (cardNo: number) => void;
+  onNextPlayer?: () => void; 
 };
 
-export function DebugControls({ cards, handLength, deck, onDebugDraw }: Props) {
+export function DebugControls({ cards, handLength, deck, onDebugDraw, onNextPlayer }: Props) {
   return (
     <div
       style={{
@@ -54,6 +55,25 @@ export function DebugControls({ cards, handLength, deck, onDebugDraw }: Props) {
             </button>
           );
         })}
+      </div>
+      <div>次のプレイヤーに手番を移動</div>
+      <div style={{ marginTop: '0.5rem' }}>
+        <button
+          type="button"
+          onClick={() => {
+            if (onNextPlayer) onNextPlayer();
+          }}
+          style={{
+            padding: '0.5rem 0.9rem',
+            borderRadius: 6,
+            background: 'linear-gradient(180deg,#fff,#eee)',
+            border: '1px solid rgba(0,0,0,0.12)',
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+        >
+          Next Player
+        </button>
       </div>
     </div>
   );

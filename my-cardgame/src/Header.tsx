@@ -10,11 +10,10 @@ type Player = {
 type Props = {
   players: Player[];
   activePlayerIndex: number;
-  onNextPlayer: () => void;
   onBackToTitle: () => void;
 };
 
-export function Header({ players, activePlayerIndex, onNextPlayer, onBackToTitle }: Props) {
+export function Header({ players, activePlayerIndex, onBackToTitle }: Props) {
   const active = players[activePlayerIndex];
 
   return (
@@ -35,22 +34,6 @@ export function Header({ players, activePlayerIndex, onNextPlayer, onBackToTitle
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <button
-          type="button"
-          onClick={onNextPlayer}
-          style={{
-            borderRadius: 999,
-            border: '1px solid rgba(255, 255, 255, 0.5)',
-            background: 'rgba(0, 0, 0, 0.5)',
-            color: '#fff',
-            padding: '0.4rem 0.9rem',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-          }}
-        >
-          Next player
-        </button>
-
         <button
           type="button"
           onClick={onBackToTitle}

@@ -195,11 +195,7 @@ export default function App() {
     >
       <Header
         players={players}
-        activePlayerIndex={activePlayerIndex}
-        onNextPlayer={() => {
-          setActivePlayerIndex((prev) => (prev + 1) % players.length);
-          setSelectedIndex(null);
-        }}        
+        activePlayerIndex={activePlayerIndex}     
         onBackToTitle={() => setScreen('title')}
       />
 
@@ -253,6 +249,10 @@ export default function App() {
               handLength={gameState.hands[activePlayerIndex].length}
               deck={gameState.deck}
               onDebugDraw={debugDrawSpecific}
+              onNextPlayer={() => {
+                setActivePlayerIndex((prev) => (prev + 1) % players.length);
+                setSelectedIndex(null);
+              }}   
             />
           </div>
         </MainLayout>
