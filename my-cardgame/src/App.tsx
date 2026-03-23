@@ -2,7 +2,7 @@ import { useState } from 'react';
 import titleImage from '../resource/title.jpg';
 import mainBtnImage from '../resource/mainBtn.png';
 import { cards, type CardDefinition } from './cards';
-import { createDefaultPlayers, type PlayerInfo,PLAYER_COUNT,HUMAN_PLAYER_INDEX } from './gameConfig';
+import { createDefaultPlayers, type PlayerInfo, PLAYER_COUNT, HUMAN_PLAYER_INDEX } from './gameConfig';
 import { HandView } from './HandView';
 import { Header } from './Header';
 import { LogView } from './LogView';
@@ -58,7 +58,7 @@ export default function App() {
       discard: [],
       log: ['ゲーム開始前の状態です。'],
     };
-  });  
+  });
 
   const startGame = () => {
     setGameState(() => {
@@ -80,27 +80,27 @@ export default function App() {
     setScreen('game');
     setActivePlayerIndex(0);
     setSelectedIndex(null);
-  };  
+  };
 
   const handleSelect = (index: number) => {
     if (pendingAction?.kind === 'merchant') {
       resolveMerchant(index);
       return;
     }
-  
+
     // 通常のカード選択
     setSelectedIndex(index);
   };
 
   const resolveMerchant = (index: number) => {
     if (!pendingAction || pendingAction.kind !== 'merchant') return;
-  
+
     const p = pendingAction.player;
-  
+
     setGameState((prev) => {
       const nextHands = prev.hands.map((h) => [...h]);
       const [chosen] = nextHands[p].splice(index, 1);
-  
+
       return {
         deck: [chosen, ...prev.deck],
         hands: nextHands,
@@ -111,10 +111,10 @@ export default function App() {
         ],
       };
     });
-  
+
     setPendingAction(null);
     setSelectedIndex(null);
-  
+
     // 次のプレイヤーへ
     setActivePlayerIndex((prev) => (prev + 1) % players.length);
   };
@@ -123,7 +123,7 @@ export default function App() {
     if (selectedIndex === null) return;
     const card = gameState.hands[activePlayerIndex][selectedIndex];
     if (!card) return;
-  
+
     if (card.no === 2) {
       const { nextState, pending, endTurn } = useMerchant(
         gameState,
@@ -131,18 +131,18 @@ export default function App() {
         selectedIndex,
         players
       );
-    
+
       setGameState(nextState);
       setSelectedIndex(null);
       setPendingAction(pending);
-    
+
       if (endTurn) {
         setActivePlayerIndex((prev) => (prev + 1) % players.length);
       }
-    
+
       return;
-    }    
-  
+    }
+
     // 他のカードは playFromHand を呼ぶ
     playFromHand(selectedIndex);
   };
@@ -163,7 +163,7 @@ export default function App() {
       };
     });
   };
-  
+
 
   const debugDrawSpecific = (cardNo: number) => {
     setGameState((prev) => {
@@ -182,7 +182,7 @@ export default function App() {
       };
     });
   };
-  
+
 
   const playFromHand = (index: number) => {
     setGameState((prev) => {
@@ -199,193 +199,199 @@ export default function App() {
     });
     setSelectedIndex(null);
   };
-  
+
 
   if (screen === 'game') {
-  return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        margin: 0,
-        padding: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundImage: `url(${titleImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        color: '#ffffff',
-        textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
-      }}
-    >
-      <Header
-        players={players}
-        activePlayerIndex={activePlayerIndex}     
-        onBackToTitle={() => setScreen('title')}
-      />
+    return (
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundImage: `url(${titleImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          color: '#ffffff',
+          textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
+        }}
+      >
+        <Header
+          players={players}
+          activePlayerIndex={activePlayerIndex}
+          onBackToTitle={() => setScreen('title')}
+        />
 
-      {/* MainLayout を縦方向に伸ばすための親コンテナ */}
-      <div style={{ flex: '1 1 auto', display: 'flex', minHeight: 0 }}>
-        <MainLayout>
-          {/* Left column */}
-          <div>
-            <DeckView deck={gameState.deck} />
-            <DiscardView
-              discard={gameState.discard}
-              lastDiscard={
-                gameState.discard.length > 0 ? gameState.discard[gameState.discard.length - 1] : null
-              }
-            />
-            <PlayerListView
-              players={players}
-              activePlayerIndex={activePlayerIndex}
-              hands={gameState.hands}
-            />
-          </div>
+        {/* MainLayout を縦方向に伸ばすための親コンテナ */}
+        <div style={{ flex: '1 1 auto', display: 'flex', minHeight: 0 }}>
+          <MainLayout>
+            {/* Left column */}
+            <div>
+              <DeckView deck={gameState.deck} />
+              <DiscardView
+                discard={gameState.discard}
+                lastDiscard={
+                  gameState.discard.length > 0 ? gameState.discard[gameState.discard.length - 1] : null
+                }
+              />
+              <PlayerListView
+                players={players}
+                activePlayerIndex={activePlayerIndex}
+                hands={gameState.hands}
+              />
+            </div>
 
-          {/* Center column */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <HandView
-              hand={gameState.hands[activePlayerIndex]}
-              selectedIndex={selectedIndex}
-              onSelect={handleSelect}
-              onDraw={drawOne}
-            />
+            {/* Center column */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <HandView
+                hand={gameState.hands[activePlayerIndex]}
+                selectedIndex={selectedIndex}
+                onSelect={handleSelect}
+                onDraw={drawOne}
+                selectMode={pendingAction?.kind ?? null}
+                selectableIndexes={
+                  pendingAction?.kind === 'merchant'
+                    ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                    : []
+                }
+              />
 
-            {pendingAction?.kind === 'merchant' && (
-              <div
+              {pendingAction?.kind === 'merchant' && (
+                <div
+                  style={{
+                    marginTop: '0.75rem',
+                    fontSize: '0.85rem',
+                    opacity: 0.9,
+                  }}
+                >
+                  商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
+                </div>
+              )}
+
+              {/* ActionButtons 等があればここに追加 */}
+            </div>
+
+            {/* Right column */}
+            <div>
+              <DebugControls
+                cards={cards}
+                handLength={gameState.hands[activePlayerIndex].length}
+                deck={gameState.deck}
+                onDebugDraw={debugDrawSpecific}
+                onNextPlayer={() => {
+                  setActivePlayerIndex((prev) => (prev + 1) % players.length);
+                  setSelectedIndex(null);
+                }}
+              />
+            </div>
+          </MainLayout>
+        </div>
+
+        {/* 下部ログ（固定高さ） */}
+        <BottomLogArea>
+          <LogView log={gameState.log} onClear={() => setGameState((prev) => ({ ...prev, log: [] }))} />
+        </BottomLogArea>
+
+        {/* モーダルはルート直下に置く（position: fixed を使っているのでここでOK） */}
+        {selectedIndex !== null && gameState.hands[activePlayerIndex][selectedIndex] && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 10,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'rgba(10, 10, 25, 0.95)',
+                borderRadius: 16,
+                padding: '1.5rem 2rem',
+                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.9)',
+                maxWidth: 600,
+                width: '90%',
+              }}
+            >
+              <h2
                 style={{
-                  marginTop: '0.75rem',
+                  marginTop: 0,
+                  marginBottom: '0.75rem',
+                  fontSize: '1.4rem',
+                }}
+              >
+                {gameState.hands[activePlayerIndex][selectedIndex].name}
+              </h2>
+              <p
+                style={{
+                  marginTop: 0,
+                  marginBottom: '0.5rem',
+                  fontSize: '0.95rem',
+                }}
+              >
+                効果: {gameState.hands[activePlayerIndex][selectedIndex].effectSummary}
+              </p>
+              <p
+                style={{
+                  marginTop: 0,
+                  marginBottom: '1rem',
                   fontSize: '0.85rem',
                   opacity: 0.9,
                 }}
               >
-                商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
+                このカードを使用すると、カードごとの効果（例: 商人は手札1枚を山札の上に戻す／黒魔術師は手札と山札をシャッフル）を順次適用します。
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.75rem',
+                  marginTop: '0.5rem',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndex(null)}
+                  style={{
+                    borderRadius: 999,
+                    border: '1px solid rgba(255, 255, 255, 0.5)',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    color: '#fff',
+                    padding: '0.45rem 1.1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmUseSelected}
+                  style={{
+                    borderRadius: 999,
+                    border: '1px solid rgba(255, 255, 255, 0.8)',
+                    background: 'linear-gradient(135deg, #f97316, #fb923c, #fed7aa)',
+                    color: '#000',
+                    padding: '0.45rem 1.4rem',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Use this card
+                </button>
               </div>
-            )}
-
-            {/* ActionButtons 等があればここに追加 */}
-          </div>
-
-          {/* Right column */}
-          <div>
-            <DebugControls
-              cards={cards}
-              handLength={gameState.hands[activePlayerIndex].length}
-              deck={gameState.deck}
-              onDebugDraw={debugDrawSpecific}
-              onNextPlayer={() => {
-                setActivePlayerIndex((prev) => (prev + 1) % players.length);
-                setSelectedIndex(null);
-              }}   
-            />
-          </div>
-        </MainLayout>
-      </div>
-
-      {/* 下部ログ（固定高さ） */}
-      <BottomLogArea>
-        <LogView log={gameState.log} onClear={() => setGameState((prev) => ({ ...prev, log: [] }))} />
-      </BottomLogArea>
-
-      {/* モーダルはルート直下に置く（position: fixed を使っているのでここでOK） */}
-      {selectedIndex !== null && gameState.hands[activePlayerIndex][selectedIndex] && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            zIndex: 10,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'rgba(10, 10, 25, 0.95)',
-              borderRadius: 16,
-              padding: '1.5rem 2rem',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.9)',
-              maxWidth: 600,
-              width: '90%',
-            }}
-          >
-            <h2
-              style={{
-                marginTop: 0,
-                marginBottom: '0.75rem',
-                fontSize: '1.4rem',
-              }}
-            >
-              {gameState.hands[activePlayerIndex][selectedIndex].name}
-            </h2>
-            <p
-              style={{
-                marginTop: 0,
-                marginBottom: '0.5rem',
-                fontSize: '0.95rem',
-              }}
-            >
-              効果: {gameState.hands[activePlayerIndex][selectedIndex].effectSummary}
-            </p>
-            <p
-              style={{
-                marginTop: 0,
-                marginBottom: '1rem',
-                fontSize: '0.85rem',
-                opacity: 0.9,
-              }}
-            >
-              このカードを使用すると、カードごとの効果（例: 商人は手札1枚を山札の上に戻す／黒魔術師は手札と山札をシャッフル）を順次適用します。
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-                marginTop: '0.5rem',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedIndex(null)}
-                style={{
-                  borderRadius: 999,
-                  border: '1px solid rgba(255, 255, 255, 0.5)',
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  color: '#fff',
-                  padding: '0.45rem 1.1rem',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmUseSelected}
-                style={{
-                  borderRadius: 999,
-                  border: '1px solid rgba(255, 255, 255, 0.8)',
-                  background: 'linear-gradient(135deg, #f97316, #fb923c, #fed7aa)',
-                  color: '#000',
-                  padding: '0.45rem 1.4rem',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                }}
-              >
-                Use this card
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

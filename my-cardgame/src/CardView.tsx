@@ -3,9 +3,10 @@ import type { CardDefinition } from './cards';
 interface CardViewProps {
   card: CardDefinition;
   onClick?: () => void;
+  highlight?: boolean;
 }
 
-export function CardView({ card, onClick }: CardViewProps) {
+export function CardView({ card, onClick, highlight = false }: CardViewProps) {
   const isAttack = card.type === 'attack';
   const isDraw = card.type === 'draw';
 
@@ -23,7 +24,7 @@ export function CardView({ card, onClick }: CardViewProps) {
         width: 256,
         height: 384,
         borderRadius: 12,
-        border: '2px solid rgba(255, 255, 255, 0.8)',
+        border: highlight ? '3px solid #00ff00' : '2px solid transparent',
         background:
           'linear-gradient(145deg, rgba(10, 10, 20, 0.9), rgba(60, 60, 90, 0.9))',
         boxShadow:
