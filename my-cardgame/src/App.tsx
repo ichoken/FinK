@@ -24,7 +24,7 @@ type GameState = {
 };
 
 type PendingAction =
-  | { kind: 'merchant' }
+  | { kind: 'merchant'; player: number }
   | null;
 
 function buildInitialDeck(): CardDefinition[] {
@@ -92,7 +92,40 @@ export default function App() {
   };  
 
   const handleSelect = (index: number) => {
+    if (pendingAction?.kind === 'merchant') {
+      resolveMerchant(index);
+      return;
+    }
+  
+    // 通常のカード選択
     setSelectedIndex(index);
+  };
+
+  const resolveMerchant = (index: number) => {
+    if (!pendingAction || pendingAction.kind !== 'merchant') return;
+  
+    const p = pendingAction.player;
+  
+    setGameState((prev) => {
+      const nextHands = prev.hands.map((h) => [...h]);
+      const [chosen] = nextHands[p].splice(index, 1);
+  
+      return {
+        deck: [chosen, ...prev.deck],
+        hands: nextHands,
+        discard: prev.discard,
+        log: [
+          ...prev.log,
+          `${players[p].name} は商人の効果で ${chosen.name} を山札の一番上に戻しました。`,
+        ],
+      };
+    });
+  
+    setPendingAction(null);
+    setSelectedIndex(null);
+  
+    // 次のプレイヤーへ
+    setActivePlayerIndex((prev) => (prev + 1) % players.length);
   };
 
   const confirmUseSelected = () => {
@@ -101,19 +134,48 @@ export default function App() {
     if (!card) return;
   
     if (card.no === 2) {
-      // 商人の処理（例）
       setGameState((prev) => {
         const nextHands = prev.hands.map((h) => [...h]);
         const [merchant] = nextHands[activePlayerIndex].splice(selectedIndex, 1);
+    
+        const afterDiscardCount = nextHands[activePlayerIndex].length;
+    
+        // 商人を破棄したログ
+        const baseLog = [
+          ...prev.log,
+          `${players[activePlayerIndex].name} が商人を使用しました。`,
+        ];
+    
+        // ★ 不発判定：破棄後の手札が0枚ならここで終了
+        if (afterDiscardCount === 0) {
+          return {
+            ...prev,
+            hands: nextHands,
+            discard: [...prev.discard, merchant],
+            log: [...baseLog, `商人の効果は手札が0枚のため不発でした。`],
+          };
+        }
+    
+        // ★ 手札が1枚以上 → 選択フェーズへ
         return {
-          deck: prev.deck,
+          ...prev,
           hands: nextHands,
           discard: [...prev.discard, merchant],
-          log: [...prev.log, `${players[activePlayerIndex].name} が商人を使用しました。`],
+          log: baseLog,
+          pendingAction: { kind: 'merchant', player: activePlayerIndex },
         };
       });
+    
       setSelectedIndex(null);
-      setPendingAction({ kind: 'merchant' });
+    
+      // ★ 不発の場合は pendingAction が null のままなのでここでターンを進める
+      setPendingAction((pa) => {
+        if (pa === null) {
+          setActivePlayerIndex((prev) => (prev + 1) % players.length);
+        }
+        return pa;
+      });
+    
       return;
     }
   
