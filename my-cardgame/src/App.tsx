@@ -12,20 +12,11 @@ import { DeckView } from './DeckView';
 import { PlayerListView } from './PlayerListView';
 import { MainLayout } from './MainLayout';
 import { BottomLogArea } from './BottomLogArea';
+import { useMerchant } from './effects/merchant';
+import type { GameState, PendingAction } from './types';
 
 
 type Screen = 'title' | 'game';
-
-type GameState = {
-  deck: CardDefinition[];
-  hands: CardDefinition[][]; // ← 各プレイヤーの手札配列（length = PLAYER_COUNT）
-  discard: CardDefinition[];
-  log: string[];
-};
-
-type PendingAction =
-  | { kind: 'merchant'; player: number }
-  | null;
 
 function buildInitialDeck(): CardDefinition[] {
   const deck: CardDefinition[] = [];
@@ -134,50 +125,23 @@ export default function App() {
     if (!card) return;
   
     if (card.no === 2) {
-      setGameState((prev) => {
-        const nextHands = prev.hands.map((h) => [...h]);
-        const [merchant] = nextHands[activePlayerIndex].splice(selectedIndex, 1);
+      const { nextState, pending, endTurn } = useMerchant(
+        gameState,
+        activePlayerIndex,
+        selectedIndex,
+        players
+      );
     
-        const afterDiscardCount = nextHands[activePlayerIndex].length;
-    
-        // 商人を破棄したログ
-        const baseLog = [
-          ...prev.log,
-          `${players[activePlayerIndex].name} が商人を使用しました。`,
-        ];
-    
-        // ★ 不発判定：破棄後の手札が0枚ならここで終了
-        if (afterDiscardCount === 0) {
-          return {
-            ...prev,
-            hands: nextHands,
-            discard: [...prev.discard, merchant],
-            log: [...baseLog, `商人の効果は手札が0枚のため不発でした。`],
-          };
-        }
-    
-        // ★ 手札が1枚以上 → 選択フェーズへ
-        return {
-          ...prev,
-          hands: nextHands,
-          discard: [...prev.discard, merchant],
-          log: baseLog,
-          pendingAction: { kind: 'merchant', player: activePlayerIndex },
-        };
-      });
-    
+      setGameState(nextState);
       setSelectedIndex(null);
+      setPendingAction(pending);
     
-      // ★ 不発の場合は pendingAction が null のままなのでここでターンを進める
-      setPendingAction((pa) => {
-        if (pa === null) {
-          setActivePlayerIndex((prev) => (prev + 1) % players.length);
-        }
-        return pa;
-      });
+      if (endTurn) {
+        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      }
     
       return;
-    }
+    }    
   
     // 他のカードは playFromHand を呼ぶ
     playFromHand(selectedIndex);
