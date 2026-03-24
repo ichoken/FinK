@@ -289,7 +289,17 @@ export default function App() {
             </div>
 
             {/* Center column */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative', // ★ ここが重要
+                height: '100%',
+                minHeight: 0,
+                flex: 1,
+              }}
+            >
+
               {pendingAction?.kind === 'prophet' && (
                 <ProphetView
                   cards={pendingAction.cards}
@@ -303,19 +313,30 @@ export default function App() {
                 />
               )}
 
-              <HandView
-                hand={gameState.hands[activePlayerIndex]}
-                selectedIndex={selectedIndex}
-                onSelect={handleSelect}
-                onDraw={drawOne}
-                selectMode={pendingAction?.kind ?? null}
-                selectableIndexes={
-                  pendingAction?.kind === 'merchant'
-                    ? gameState.hands[activePlayerIndex].map((_, i) => i)
-                    : []
-                }
-              />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '4%',           // 調整可能
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 10,
+                  pointerEvents: 'auto',
+                }}
+              >
 
+                <HandView
+                  hand={gameState.hands[activePlayerIndex]}
+                  selectedIndex={selectedIndex}
+                  onSelect={handleSelect}
+                  onDraw={drawOne}
+                  selectMode={pendingAction?.kind ?? null}
+                  selectableIndexes={
+                    pendingAction?.kind === 'merchant'
+                      ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                      : []
+                  }
+                />
+              </div>
 
               {pendingAction?.kind === 'merchant' && (
                 <div
