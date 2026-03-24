@@ -4,9 +4,11 @@ interface CardViewProps {
   card: CardDefinition;
   onClick?: () => void;
   highlight?: boolean;
+  isDragging?: boolean;
 }
 
-export function CardView({ card, onClick, highlight = false }: CardViewProps) {
+export function CardView({ card, onClick, highlight = false, isDragging = false }: CardViewProps) {
+
   const isAttack = card.type === 'attack';
   const isDraw = card.type === 'draw';
 
@@ -35,7 +37,8 @@ export function CardView({ card, onClick, highlight = false }: CardViewProps) {
         flexDirection: 'column',
         cursor: onClick ? 'pointer' : 'default',
         transform: onClick ? 'translateY(0)' : undefined,
-        transition: 'transform 0.1s ease-out, box-shadow 0.1s ease-out',
+        transition: isDragging ? 'none' : 'transform 0.1s ease-out, box-shadow 0.1s ease-out',
+
       }}
     >
       <div

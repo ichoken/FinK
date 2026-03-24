@@ -16,7 +16,7 @@ import { useMerchant } from './effects/merchant';
 import { useProphet } from './effects/prophet';
 import type { GameState, PendingAction } from './types';
 import { ProphetView } from './ProphetView';
-
+import { ProphetPortal } from './ProphetPortal';
 
 
 type Screen = 'title' | 'game';
@@ -301,16 +301,36 @@ export default function App() {
             >
 
               {pendingAction?.kind === 'prophet' && (
-                <ProphetView
-                  cards={pendingAction.cards}
-                  onReorder={(newOrder) => {
-                    setPendingAction({
-                      ...pendingAction,
-                      cards: newOrder,
-                    });
-                  }}
-                  onConfirm={resolveProphet}
-                />
+                <ProphetPortal>
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-5%',                 // 上部の位置（調整可）
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 50,
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      pointerEvents: 'none'      // 外側は無効化
+                    }}
+                  >
+                    <div style={{ position: 'relative', pointerEvents: 'auto', width: 'min(1000px, 90%)' }}>
+                      <ProphetView
+                        cards={pendingAction.cards}
+                        onReorder={(newOrder) => {
+                          setPendingAction({
+                            ...pendingAction,
+                            cards: newOrder,
+                          });
+                        }}
+                        onConfirm={resolveProphet}
+                      />
+                    </div>
+                  </div>
+                </ProphetPortal>
+
               )}
 
               <div
