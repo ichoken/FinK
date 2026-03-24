@@ -16,6 +16,7 @@ export type PendingActionKind =
 // pendingAction の型
 export type PendingAction =
   | { kind: PendingActionKind; player: number }
+  | { kind: 'prophet'; player: number; cards: CardDefinition[] }
   | null;
 
 // ゲーム全体の状態

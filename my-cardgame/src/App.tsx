@@ -13,7 +13,10 @@ import { PlayerListView } from './PlayerListView';
 import { MainLayout } from './MainLayout';
 import { BottomLogArea } from './BottomLogArea';
 import { useMerchant } from './effects/merchant';
+import { useProphet } from './effects/prophet';
 import type { GameState, PendingAction } from './types';
+import { ProphetView } from './ProphetView';
+
 
 
 type Screen = 'title' | 'game';
@@ -91,6 +94,29 @@ export default function App() {
     // 通常のカード選択
     setSelectedIndex(index);
   };
+  const resolveProphet = () => {
+    if (!pendingAction || pendingAction.kind !== 'prophet') return;
+
+    const p = pendingAction.player;
+    const ordered = pendingAction.cards;
+
+    setGameState((prev) => {
+      return {
+        deck: [...ordered, ...prev.deck], // ← 並び替えた順で山札の上に戻す
+        hands: prev.hands,
+        discard: prev.discard,
+        log: [
+          ...prev.log,
+          `${players[p].name} は預言者の効果で山札の上を並び替えました。`,
+        ],
+      };
+    });
+
+    setPendingAction(null);
+
+    // 次のプレイヤーへ
+    setActivePlayerIndex((prev) => (prev + 1) % players.length);
+  };
 
   const resolveMerchant = (index: number) => {
     if (!pendingAction || pendingAction.kind !== 'merchant') return;
@@ -123,6 +149,24 @@ export default function App() {
     if (selectedIndex === null) return;
     const card = gameState.hands[activePlayerIndex][selectedIndex];
     if (!card) return;
+
+    if (card.no === 1) {
+      const { nextState, pending, endTurn } = useProphet(
+        gameState,
+        activePlayerIndex,
+        players
+      );
+
+      setGameState(nextState);
+      setSelectedIndex(null);
+      setPendingAction(pending);
+
+      if (endTurn) {
+        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      }
+
+      return;
+    }
 
     if (card.no === 2) {
       const { nextState, pending, endTurn } = useMerchant(
@@ -258,6 +302,18 @@ export default function App() {
                     : []
                 }
               />
+              {pendingAction?.kind === 'prophet' && (
+                <ProphetView
+                  cards={pendingAction.cards}
+                  onReorder={(newOrder) => {
+                    setPendingAction({
+                      ...pendingAction,
+                      cards: newOrder,
+                    });
+                  }}
+                  onConfirm={resolveProphet}
+                />
+              )}
 
               {pendingAction?.kind === 'merchant' && (
                 <div

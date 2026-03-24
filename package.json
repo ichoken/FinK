@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "gh-pages": "^6.3.0"
+  },
+  "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1"
   }
 }
