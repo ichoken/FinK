@@ -21,8 +21,8 @@ export function CardView({ card, onClick, highlight = false }: CardViewProps) {
       role={onClick ? 'button' : undefined}
       aria-label={isDraw ? 'ドロー' : card.name}
       style={{
-        width: 256,
-        height: 384,
+        width: 180,
+        height: 269,
         borderRadius: 12,
         border: highlight ? '3px solid #00ff00' : '2px solid transparent',
         background:

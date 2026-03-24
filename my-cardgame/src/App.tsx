@@ -290,18 +290,6 @@ export default function App() {
 
             {/* Center column */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <HandView
-                hand={gameState.hands[activePlayerIndex]}
-                selectedIndex={selectedIndex}
-                onSelect={handleSelect}
-                onDraw={drawOne}
-                selectMode={pendingAction?.kind ?? null}
-                selectableIndexes={
-                  pendingAction?.kind === 'merchant'
-                    ? gameState.hands[activePlayerIndex].map((_, i) => i)
-                    : []
-                }
-              />
               {pendingAction?.kind === 'prophet' && (
                 <ProphetView
                   cards={pendingAction.cards}
@@ -314,6 +302,20 @@ export default function App() {
                   onConfirm={resolveProphet}
                 />
               )}
+
+              <HandView
+                hand={gameState.hands[activePlayerIndex]}
+                selectedIndex={selectedIndex}
+                onSelect={handleSelect}
+                onDraw={drawOne}
+                selectMode={pendingAction?.kind ?? null}
+                selectableIndexes={
+                  pendingAction?.kind === 'merchant'
+                    ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                    : []
+                }
+              />
+
 
               {pendingAction?.kind === 'merchant' && (
                 <div

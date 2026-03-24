@@ -74,7 +74,7 @@ export function ProphetView({ cards, onReorder, onConfirm }: ProphetViewProps) {
                     cursor: 'pointer',
                 }}
             >
-                この順番で決定
+                OK
             </button>
         </div>
     );
