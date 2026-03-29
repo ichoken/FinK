@@ -18,6 +18,7 @@ import type { GameState, PendingAction } from './types';
 import { ProphetView } from './ProphetView';
 import { ProphetPortal } from './ProphetPortal';
 import { eliminatePlayerAndUpdate } from './eliminationHandlers';
+import { checkElimination } from './eliminationCheck';
 
 
 
@@ -227,6 +228,28 @@ export default function App() {
         discard: prev.discard,
         log: [...prev.log, `デバッグ: ${players[activePlayerIndex].name} に No.${picked.no} ${picked.name} を追加しました。`],
       };
+    });
+    setGameState((prev) => {
+      const result = checkElimination(activePlayerIndex, prev);
+
+      if (result.eliminated) {
+        eliminatePlayerAndUpdate({
+          playerIndex: activePlayerIndex,
+          players,
+          setPlayers,
+          setGameState,
+          onShowEliminationModal: () => { },
+
+          // ★ ログに理由を追加
+        });
+
+        // 理由ログを追加
+        return {
+          ...prev,
+          log: [...prev.log, `脱落理由: ${result.reason}`],
+        };
+      }
+      return prev;
     });
   };
 
