@@ -1,16 +1,21 @@
 // src/DebugControls.tsx
 import React from 'react';
 import type { CardDefinition } from './cards';
+import type { PlayerInfo } from './gameConfig';
+
 
 type Props = {
   cards: CardDefinition[];
   handLength: number;
   deck: CardDefinition[];
   onDebugDraw: (cardNo: number) => void;
-  onNextPlayer?: () => void; 
+  onNextPlayer?: () => void;
+  onDebugEliminate?: () => void;
+  players?: PlayerInfo[];
+  activePlayerIndex?: number;
 };
 
-export function DebugControls({ cards, handLength, deck, onDebugDraw, onNextPlayer }: Props) {
+export function DebugControls({ cards, handLength, deck, onDebugDraw, onNextPlayer, onDebugEliminate, players, activePlayerIndex }: Props) {
   return (
     <div
       style={{
@@ -74,6 +79,30 @@ export function DebugControls({ cards, handLength, deck, onDebugDraw, onNextPlay
         >
           Next Player
         </button>
+      </div>
+      <div style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => {
+            if (onDebugEliminate) onDebugEliminate();
+          }}
+          style={{
+            background: '#c0392b',
+            color: '#fff',
+            border: 'none',
+            padding: '0.5rem 0.75rem',
+            borderRadius: 6,
+            cursor: 'pointer',
+          }}
+        >
+          Debug: 脱落させる
+        </button>
+
+        <div style={{ color: '#fff', fontSize: 12 }}>
+          {players && typeof activePlayerIndex === 'number'
+            ? `現在: ${players[activePlayerIndex]?.name ?? `Player${activePlayerIndex + 1}`}`
+            : 'Debug Controls'}
+        </div>
       </div>
     </div>
   );

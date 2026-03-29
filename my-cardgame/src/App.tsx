@@ -43,7 +43,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [players] = useState<PlayerInfo[]>(() => createDefaultPlayers());
+  const [players, setPlayers] = useState<PlayerInfo[]>(() => createDefaultPlayers());
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
@@ -80,6 +80,7 @@ export default function App() {
         log: ['新しいゲームを開始しました。各プレイヤーに初期手札を2枚配りました。'],
       };
     });
+    setPlayers(() => createDefaultPlayers());
     setScreen('game');
     setActivePlayerIndex(0);
     setSelectedIndex(null);
@@ -227,6 +228,24 @@ export default function App() {
     });
   };
 
+  const debugEliminateActivePlayer = () => {
+    // 1) players を更新して isEliminated を true にする
+    setPlayers((prev) => prev.map((p, i) => (i === activePlayerIndex ? { ...p, isEliminated: true } : p)));
+
+    // 2) gameState を更新して手札を空にしログを追加する
+    setGameState((prev) => {
+      const newHands = prev.hands.map((h, i) => (i === activePlayerIndex ? [] : h));
+      const newLog = [
+        ...prev.log,
+        `デバッグ: ${players[activePlayerIndex]?.name ?? `Player${activePlayerIndex + 1}`} を脱落させました。`,
+      ];
+      return {
+        ...prev,
+        hands: newHands,
+        log: newLog,
+      };
+    });
+  };
 
   const playFromHand = (index: number) => {
     setGameState((prev) => {
@@ -384,6 +403,9 @@ export default function App() {
                   setActivePlayerIndex((prev) => (prev + 1) % players.length);
                   setSelectedIndex(null);
                 }}
+                onDebugEliminate={debugEliminateActivePlayer}
+                players={players}
+                activePlayerIndex={activePlayerIndex}
               />
             </div>
           </MainLayout>
