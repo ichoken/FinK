@@ -17,6 +17,8 @@ import { useProphet } from './effects/prophet';
 import type { GameState, PendingAction } from './types';
 import { ProphetView } from './ProphetView';
 import { ProphetPortal } from './ProphetPortal';
+import { eliminatePlayerAndUpdate } from './eliminationHandlers';
+
 
 
 type Screen = 'title' | 'game';
@@ -229,23 +231,21 @@ export default function App() {
   };
 
   const debugEliminateActivePlayer = () => {
-    // 1) players を更新して isEliminated を true にする
-    setPlayers((prev) => prev.map((p, i) => (i === activePlayerIndex ? { ...p, isEliminated: true } : p)));
-
-    // 2) gameState を更新して手札を空にしログを追加する
-    setGameState((prev) => {
-      const newHands = prev.hands.map((h, i) => (i === activePlayerIndex ? [] : h));
-      const newLog = [
-        ...prev.log,
-        `デバッグ: ${players[activePlayerIndex]?.name ?? `Player${activePlayerIndex + 1}`} を脱落させました。`,
-      ];
-      return {
-        ...prev,
-        hands: newHands,
-        log: newLog,
-      };
+    // onShowEliminationModal を渡すと UI 側で脱落要因を表示できます
+    eliminatePlayerAndUpdate({
+      playerIndex: activePlayerIndex,
+      players,
+      setPlayers,
+      setGameState,
+      onShowEliminationModal: (idx, eliminatedHand) => {
+        // ここでモーダルを開く等の UI 処理を行えます
+        // 例: setEliminationModal({ open: true, playerIndex: idx, hand: eliminatedHand });
+        // 今はログで確認するだけなら何もしなくて良い
+        // console.log('Elimination modal callback', idx, eliminatedHand);
+      },
     });
   };
+
 
   const playFromHand = (index: number) => {
     setGameState((prev) => {
