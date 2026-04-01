@@ -25,6 +25,8 @@ export type GameState = {
   hands: CardDefinition[][];
   discard: CardDefinition[];
   log: string[];
+  gameOver: boolean;
+  winners: number[];
 };
 
 export type { PlayerInfo, CardDefinition };

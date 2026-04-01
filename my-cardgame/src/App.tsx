@@ -19,6 +19,12 @@ import { ProphetView } from './ProphetView';
 import { ProphetPortal } from './ProphetPortal';
 import { eliminatePlayerAndUpdate } from './eliminationHandlers';
 import { checkElimination } from './eliminationCheck';
+import { handleGameOver } from './victoryHandlers';
+import {
+  checkVictoryOnHandChange,
+  checkVictoryOnElimination,
+  checkVictoryOnDeckEmpty,
+} from './victoryCheck';
 
 
 
@@ -63,6 +69,8 @@ export default function App() {
       hands,
       discard: [],
       log: ['ゲーム開始前の状態です。'],
+      gameOver: false,
+      winners: [],
     };
   });
 
@@ -81,6 +89,8 @@ export default function App() {
         hands,
         discard: [],
         log: ['新しいゲームを開始しました。各プレイヤーに初期手札を2枚配りました。'],
+        gameOver: false,
+        winners: [],
       };
     });
     setPlayers(() => createDefaultPlayers());
@@ -215,43 +225,85 @@ export default function App() {
 
   const debugDrawSpecific = (cardNo: number) => {
     setGameState((prev) => {
+      // --- 1) 手札追加処理 ---
       if (prev.hands[activePlayerIndex].length >= 4) return prev;
+
       const indexInDeck = prev.deck.findIndex((c) => c.no === cardNo);
       if (indexInDeck === -1) return prev;
+
       const nextDeck = [...prev.deck];
       const [picked] = nextDeck.splice(indexInDeck, 1);
+
       const nextHands = prev.hands.map((h) => [...h]);
       nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], picked];
-      return {
+
+      let nextState: GameState = {
+        ...prev,
         deck: nextDeck,
         hands: nextHands,
-        discard: prev.discard,
-        log: [...prev.log, `デバッグ: ${players[activePlayerIndex].name} に No.${picked.no} ${picked.name} を追加しました。`],
+        log: [
+          ...prev.log,
+          `デバッグ: ${players[activePlayerIndex].name} に No.${picked.no} ${picked.name} を追加しました。`,
+        ],
       };
-    });
-    setGameState((prev) => {
-      const result = checkElimination(activePlayerIndex, prev);
 
-      if (result.eliminated) {
+      // --- 2) 脱落判定 ---
+      const elim = checkElimination(activePlayerIndex, nextState);
+      if (elim.eliminated) {
         eliminatePlayerAndUpdate({
           playerIndex: activePlayerIndex,
           players,
           setPlayers,
           setGameState,
-          onShowEliminationModal: () => { },
-
-          // ★ ログに理由を追加
         });
 
-        // 理由ログを追加
-        return {
-          ...prev,
-          log: [...prev.log, `脱落理由: ${result.reason}`],
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `脱落理由: ${elim.reason}`],
         };
+
+        return nextState;
       }
-      return prev;
+
+      // --- 3) 勝利判定（シスター4枚） ---
+      const v1 = checkVictoryOnHandChange(activePlayerIndex, nextState);
+
+      if (v1.win) {
+        handleGameOver({
+          winners: v1.winners,
+          players,
+          setGameState,
+        });
+
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `勝利条件達成: シスター4枚`],
+        };
+
+        return nextState;
+      }
+
+      // --- 4) 勝利判定（山札0枚） ---
+      const v2 = checkVictoryOnDeckEmpty(nextState, players);
+      if (v2.win) {
+        handleGameOver({
+          winners: v2.winners,
+          players,
+          setGameState,
+        });
+
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `勝利条件達成: 山札0枚 + FinK`],
+        };
+
+        return nextState;
+      }
+
+      return nextState;
     });
   };
+
 
   const debugEliminateActivePlayer = () => {
     // onShowEliminationModal を渡すと UI 側で脱落要因を表示できます
