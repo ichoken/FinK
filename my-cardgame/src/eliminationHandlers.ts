@@ -1,6 +1,8 @@
 // src/eliminationHandlers.ts
 import type { GameState } from './types';
 import type { PlayerInfo } from './gameConfig';
+import { checkVictoryOnElimination } from './victoryCheck';
+import { handleGameOver } from './victoryHandlers';
 
 /** Fisher‑Yates シャッフル（ユーティリティ） */
 export function shuffleArray<T>(arr: T[]): T[] {
@@ -92,5 +94,28 @@ export function eliminatePlayerAndUpdate(params: {
     });
 
     // 2) players の isEliminated を更新
-    setPlayers((prev) => prev.map((p, i) => (i === playerIndex ? { ...p, isEliminated: true } : p)));
+    setPlayers((prev) => {
+        const next = prev.map((p, i) =>
+            i === playerIndex ? { ...p, isEliminated: true } : p
+        );
+
+        // ★★★ ここで勝利判定（生存者1名）を行う ★★★
+        const v = checkVictoryOnElimination(next);
+        if (v.win) {
+            handleGameOver({
+                winners: v.winners,
+                players: next,
+                setGameState,
+            });
+
+            // gameState に勝利ログを追加
+            setGameState((prevState) => ({
+                ...prevState,
+                log: [...prevState.log, `勝利条件達成: 生存者1名`],
+            }));
+        }
+
+        return next;
+    });
+
 }

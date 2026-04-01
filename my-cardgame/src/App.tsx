@@ -207,18 +207,80 @@ export default function App() {
 
   const drawOne = () => {
     setGameState((prev) => {
-      if (prev.deck.length === 0 || prev.hands[activePlayerIndex].length >= 4) {
-        return prev;
-      }
-      const [top, ...rest] = prev.deck;
+      // --- 1) 山札チェック ---
+      if (prev.deck.length === 0) return prev;
+
+      // --- 2) ドロー処理 ---
+      const nextDeck = [...prev.deck];
+      const [drawn] = nextDeck.splice(0, 1);
+
       const nextHands = prev.hands.map((h) => [...h]);
-      nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], top];
-      return {
-        deck: rest,
+      nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], drawn];
+
+      let nextState: GameState = {
+        ...prev,
+        deck: nextDeck,
         hands: nextHands,
-        discard: prev.discard,
-        log: [...prev.log, `プレイヤー${players[activePlayerIndex].name}がカードを1枚ドローしました。（${top.name}）`],
+        log: [
+          ...prev.log,
+          `${players[activePlayerIndex].name} がカードを1枚引きました。`,
+        ],
       };
+
+      // --- 3) 脱落判定 ---
+      const elim = checkElimination(activePlayerIndex, nextState);
+      if (elim.eliminated) {
+        eliminatePlayerAndUpdate({
+          playerIndex: activePlayerIndex,
+          players,
+          setPlayers,
+          setGameState,
+        });
+
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `脱落理由: ${elim.reason}`],
+        };
+
+        return nextState;
+      }
+
+      // --- 4) 勝利判定（シスター4枚） ---
+      const v1 = checkVictoryOnHandChange(activePlayerIndex, nextState);
+
+      if (v1.win) {
+        handleGameOver({
+          winners: v1.winners,
+          players,
+          setGameState,
+        });
+
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `勝利条件達成: シスター4枚`],
+        };
+
+        return nextState;
+      }
+
+      // --- 5) 勝利判定（山札0枚 + FinK） ---
+      const v2 = checkVictoryOnDeckEmpty(nextState, players);
+      if (v2.win) {
+        handleGameOver({
+          winners: v2.winners,
+          players,
+          setGameState,
+        });
+
+        nextState = {
+          ...nextState,
+          log: [...nextState.log, `勝利条件達成: 山札0枚 + FinK`],
+        };
+
+        return nextState;
+      }
+
+      return nextState;
     });
   };
 
