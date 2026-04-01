@@ -419,6 +419,44 @@ export default function App() {
           textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
         }}
       >
+        {gameState.gameOver && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.75)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 99999,
+              color: '#fff',
+              textShadow: '0 3px 10px rgba(0,0,0,0.8)',
+            }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>
+              {gameState.winners.length === 0
+                ? '引き分け！'
+                : `勝者: ${gameState.winners.map((i) => players[i].name).join('、')}`}
+            </div>
+
+            <button
+              onClick={startGame}
+              style={{
+                padding: '0.8rem 2rem',
+                fontSize: '1.2rem',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #f97316, #fb923c, #fed7aa)',
+                color: '#000',
+                fontWeight: 700,
+              }}
+            >
+              リスタート
+            </button>
+          </div>
+        )}
         <Header
           players={players}
           activePlayerIndex={activePlayerIndex}
