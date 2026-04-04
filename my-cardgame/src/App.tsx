@@ -430,6 +430,7 @@ export default function App() {
         setGameState={setGameState}
         setPendingAction={setPendingAction}
         setPlayers={setPlayers}
+        cards={cards}
       />
     );
   }

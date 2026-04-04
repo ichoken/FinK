@@ -37,6 +37,8 @@ export function GameScreen({
     startGame,
     setGameState,
     setPendingAction,
+    setPlayers,
+    cards,
 }) {
     return (
         <div
@@ -320,7 +322,7 @@ export function GameScreen({
                     {/* Right column */}
                     <div>
                         <DebugControls
-                            cards={[]} // cards は App.tsx 側で渡してもOK
+                            cards={cards} // cards は App.tsx 側で渡してもOK
                             handLength={gameState.hands[activePlayerIndex].length}
                             deck={gameState.deck}
                             onDebugDraw={debugDrawSpecific}
