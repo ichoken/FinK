@@ -104,21 +104,26 @@ export default function App() {
     const p = pendingAction.player;
     const ordered = pendingAction.cards;
 
+    // ★★★ 預言者カードを破棄する ★★★
     setGameState((prev) => {
+      const nextHands = prev.hands.map((h) => [...h]);
+
+      // 使用した預言者カードを手札から1枚削除
+      const idx = nextHands[p].findIndex((c) => c.no === 1);
+      const [usedCard] = nextHands[p].splice(idx, 1);
+
       return {
-        deck: [...ordered, ...prev.deck], // ← 並び替えた順で山札の上に戻す
-        hands: prev.hands,
-        discard: prev.discard,
+        deck: [...ordered, ...prev.deck],
+        hands: nextHands,
+        discard: [...prev.discard, usedCard],
         log: [
           ...prev.log,
-          `${players[p].name} は預言者の効果で山札の上を並び替えました。`,
+          `${players[p].name} は預言者を使用し、山札の上を並び替えました。`,
         ],
       };
     });
 
     setPendingAction(null);
-
-    // 次のプレイヤーへ
     setActivePlayerIndex((prev) => (prev + 1) % players.length);
   };
 
