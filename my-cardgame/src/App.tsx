@@ -16,6 +16,7 @@ import { GameScreen } from './GameScreen';
 import { TitleScreen } from './TitleScreen';
 import { useFortuneTeller } from './effects/fortuneTeller';
 import { trySisterDefense } from './utils/sisterDefense';
+import { discardUsedCard } from './utils/discardUsedCard';
 
 
 
@@ -191,6 +192,10 @@ export default function App() {
 
           return next;
         });
+      },
+      () => {
+        // ★ 使用カード破棄（共通処理）
+        setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
       }
     );
 
@@ -201,17 +206,8 @@ export default function App() {
     }
 
     // ★ シスター防御が発動しなかった場合 → ここで破棄
-    setGameState(prev => {
-      const nextHands = prev.hands.map(h => [...h]);
-      const idx = nextHands[activePlayerIndex].findIndex(c => c.no === 5);
-      const [usedCard] = nextHands[activePlayerIndex].splice(idx, 1);
+    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
 
-      return {
-        ...prev,
-        hands: nextHands,
-        discard: [...prev.discard, usedCard],
-      };
-    });
 
     // ★ 手札公開フェーズへ
     setPendingAction({

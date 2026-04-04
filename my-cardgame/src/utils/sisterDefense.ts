@@ -6,7 +6,8 @@ export function trySisterDefense(
     targetIndex: number,
     gameState: GameState,
     players: PlayerInfo[],
-    setGameState: React.Dispatch<React.SetStateAction<GameState>>
+    setGameState: React.Dispatch<React.SetStateAction<GameState>>,
+    discardCallback
 ): boolean {
     const targetHand = gameState.hands[targetIndex];
     const sisterIndex = targetHand.findIndex((c) => c.no === 7);
@@ -14,6 +15,7 @@ export function trySisterDefense(
     // シスターがない → 防御なし
     if (sisterIndex === -1) return false;
 
+    discardCallback();
     // シスターを1枚破棄
     const nextHands = gameState.hands.map((h) => [...h]);
     const [sisterCard] = nextHands[targetIndex].splice(sisterIndex, 1);
