@@ -1,6 +1,8 @@
 // src/effects/useFortuneTeller.ts
 import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
+import { findAttackTargets } from '../utils/checkTargets';
+
 
 export function useFortuneTeller(
     gameState: GameState,
@@ -11,22 +13,18 @@ export function useFortuneTeller(
     pending: PendingAction | null;
     endTurn: boolean;
 } {
-    const myHand = gameState.hands[activePlayerIndex];
+    const targets = findAttackTargets(activePlayerIndex, gameState, players);
 
-    // 他プレイヤーの手札が全員0枚 → 何もせずターン終了
-    const others = players
-        .map((p, i) => ({ i, hand: gameState.hands[i] }))
-        .filter((p) => p.i !== activePlayerIndex);
-
-    const othersWithCards = others.filter((p) => p.hand.length > 0);
-    if (othersWithCards.length === 0) {
+    if (targets.length === 0) {
+        // → 警告モーダルへ
         return {
-            nextState: {
-                ...gameState,
-                log: [...gameState.log, `${players[activePlayerIndex].name} は占い師を使用したが対象がいませんでした。`],
+            nextState: gameState,
+            pending: {
+                kind: 'noTargetWarning',
+                player: activePlayerIndex,
+                cardNo: 5, // ★ 占い師
             },
-            pending: null,
-            endTurn: true,
+            endTurn: false,
         };
     }
 

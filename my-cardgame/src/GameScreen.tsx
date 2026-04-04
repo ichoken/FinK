@@ -173,6 +173,75 @@ export function GameScreen({
                                 </div>
                             </ProphetPortal>
                         )}
+                        {pendingAction?.kind === 'noTargetWarning' && (
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(0,0,0,0.7)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    zIndex: 200,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        background: 'rgba(20,20,40,0.95)',
+                                        padding: '1.5rem',
+                                        borderRadius: '12px',
+                                        width: 'min(500px, 90%)',
+                                    }}
+                                >
+                                    <h3>対象者がいません</h3>
+                                    <p>
+                                        対象者がいない状態で使用すると、このカードは無効のまま破棄します。
+                                        <br />
+                                        それでもよろしいでしょうか？
+                                    </p>
+
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                        <button
+                                            onClick={() => {
+                                                // No → キャンセル
+                                                setPendingAction(null);
+                                            }}
+                                        >
+                                            いいえ
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                // Yes → カード破棄してターン終了
+                                                setGameState((prev) => {
+                                                    const nextHands = prev.hands.map((h) => [...h]);
+                                                    const idx = nextHands[pendingAction.player].findIndex(
+                                                        (c) => c.no === pendingAction.cardNo
+                                                    );
+                                                    const [used] = nextHands[pendingAction.player].splice(idx, 1);
+
+                                                    return {
+                                                        ...prev,
+                                                        hands: nextHands,
+                                                        discard: [...prev.discard, used],
+                                                        log: [
+                                                            ...prev.log,
+                                                            `${players[pendingAction.player].name} は対象がいなかったため ${used.name} を破棄しました。`,
+                                                        ],
+                                                    };
+                                                });
+
+                                                setPendingAction(null);
+                                                setActivePlayerIndex((prev) => (prev + 1) % players.length);
+                                            }}
+                                        >
+                                            はい
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {pendingAction?.kind === 'fortune' && pendingAction.step === 'chooseTarget' && (
                             <div
                                 style={{
