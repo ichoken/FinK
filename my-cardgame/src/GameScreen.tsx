@@ -216,24 +216,19 @@ export function GameScreen({
                                         <button
                                             onClick={() => {
                                                 // Yes → カード破棄してターン終了
-                                                setGameState((prev) => {
-                                                    const nextHands = prev.hands.map((h) => [...h]);
-                                                    const idx = nextHands[pendingAction.player].findIndex(
-                                                        (c) => c.no === pendingAction.cardNo
-                                                    );
+                                                // Yes のとき
+                                                setGameState(prev => {
+                                                    const nextHands = prev.hands.map(h => [...h]);
+                                                    const idx = nextHands[pendingAction.player].findIndex(c => c.no === pendingAction.cardNo);
                                                     const [used] = nextHands[pendingAction.player].splice(idx, 1);
 
                                                     return {
                                                         ...prev,
                                                         hands: nextHands,
                                                         discard: [...prev.discard, used],
-                                                        log: [
-                                                            ...prev.log,
-                                                            `${players[pendingAction.player].name} は対象がいなかったため ${used.name} を破棄しました。`,
-                                                        ],
+                                                        log: [...prev.log, `${players[pendingAction.player].name} は対象がいなかったため ${used.name} を破棄しました。`],
                                                     };
                                                 });
-
                                                 setPendingAction(null);
                                                 setActivePlayerIndex((prev) => (prev + 1) % players.length);
                                             }}

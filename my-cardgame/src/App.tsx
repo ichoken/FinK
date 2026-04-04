@@ -161,14 +161,6 @@ export default function App() {
   };
 
   const resolveFortuneTarget = (targetIndex: number) => {
-    // ★ シスター防御
-    if (trySisterDefense(targetIndex, gameState, players, setGameState)) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ ログ
     setGameState(prev => ({
       ...prev,
       log: [
@@ -176,6 +168,50 @@ export default function App() {
         `${players[activePlayerIndex].name} が ${players[targetIndex].name} に対して占い師を発動しました。`,
       ],
     }));
+    // ★ シスター防御（ここで破棄も行う）
+    const defended = trySisterDefense(
+      targetIndex,
+      gameState,
+      players,
+      (updater) => {
+        setGameState(prev => {
+          const next = typeof updater === "function" ? updater(prev) : updater;
+
+          // ★ 使用した占い師カードを破棄
+          const nextHands = next.hands.map(h => [...h]);
+          const idx = nextHands[activePlayerIndex].findIndex(c => c.no === 5);
+          if (idx !== -1) {
+            const [usedCard] = nextHands[activePlayerIndex].splice(idx, 1);
+            return {
+              ...next,
+              hands: nextHands,
+              discard: [...next.discard, usedCard],
+            };
+          }
+
+          return next;
+        });
+      }
+    );
+
+    if (defended) {
+      setPendingAction(null);
+      setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      return;
+    }
+
+    // ★ シスター防御が発動しなかった場合 → ここで破棄
+    setGameState(prev => {
+      const nextHands = prev.hands.map(h => [...h]);
+      const idx = nextHands[activePlayerIndex].findIndex(c => c.no === 5);
+      const [usedCard] = nextHands[activePlayerIndex].splice(idx, 1);
+
+      return {
+        ...prev,
+        hands: nextHands,
+        discard: [...prev.discard, usedCard],
+      };
+    });
 
     // ★ 手札公開フェーズへ
     setPendingAction({
