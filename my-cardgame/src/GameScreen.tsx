@@ -13,6 +13,7 @@ import { BottomLogArea } from './BottomLogArea';
 import { LogView } from './LogView';
 import { ProphetPortal } from './ProphetPortal';
 import { ProphetView } from './ProphetView';
+import { trySisterDefense } from './utils/sisterDefense';
 
 export function GameScreen({
     players,
@@ -190,20 +191,24 @@ export function GameScreen({
                                         <button
                                             key={i}
                                             onClick={() => {
+                                                setGameState(prev => ({
+                                                    ...prev,
+                                                    log: [
+                                                        ...prev.log,
+                                                        `${players[activePlayerIndex].name} が ${players[i].name} に対して占い師を発動しました。`,
+                                                    ],
+                                                }));
+
                                                 // シスターがある場合 → シスター破棄して終了
-                                                const hasSister = gameState.hands[i].some((c) => c.no === 7);
+                                                const defended = trySisterDefense(
+                                                    i,               // 対象プレイヤー
+                                                    gameState,
+                                                    players,
+                                                    setGameState
+                                                );
 
-                                                if (hasSister) {
-                                                    const nextHands = gameState.hands.map((h) => [...h]);
-                                                    const idx = nextHands[i].findIndex((c) => c.no === 7);
-                                                    nextHands[i].splice(idx, 1);
-
-                                                    setGameState((prev) => ({
-                                                        ...prev,
-                                                        hands: nextHands,
-                                                        log: [...prev.log, `${p.name} のシスターが発動し、占い師を無効化しました。`],
-                                                    }));
-
+                                                if (defended) {
+                                                    // シスターが発動したのでターン終了
                                                     setPendingAction(null);
                                                     setActivePlayerIndex((prev) => (prev + 1) % players.length);
                                                     return;
