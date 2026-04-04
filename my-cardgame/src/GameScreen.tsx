@@ -170,6 +170,109 @@ export function GameScreen({
                                 </div>
                             </ProphetPortal>
                         )}
+                        {pendingAction?.kind === 'fortune' && pendingAction.step === 'chooseTarget' && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: '20%',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    zIndex: 50,
+                                    background: 'rgba(0,0,0,0.8)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                }}
+                            >
+                                <h3>占い師：対象プレイヤーを選択</h3>
+                                {players.map((p, i) =>
+                                    i !== activePlayerIndex &&
+                                        gameState.hands[i].length > 0 ? (
+                                        <button
+                                            key={i}
+                                            onClick={() => {
+                                                // シスターがある場合 → シスター破棄して終了
+                                                const hasSister = gameState.hands[i].some((c) => c.no === 7);
+
+                                                if (hasSister) {
+                                                    const nextHands = gameState.hands.map((h) => [...h]);
+                                                    const idx = nextHands[i].findIndex((c) => c.no === 7);
+                                                    nextHands[i].splice(idx, 1);
+
+                                                    setGameState((prev) => ({
+                                                        ...prev,
+                                                        hands: nextHands,
+                                                        log: [...prev.log, `${p.name} のシスターが発動し、占い師を無効化しました。`],
+                                                    }));
+
+                                                    setPendingAction(null);
+                                                    setActivePlayerIndex((prev) => (prev + 1) % players.length);
+                                                    return;
+                                                }
+
+                                                // シスターがない → 手札公開フェーズへ
+                                                setPendingAction({
+                                                    kind: 'fortune',
+                                                    player: activePlayerIndex,
+                                                    step: 'showHand',
+                                                    target: i,
+                                                });
+                                            }}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    ) : null
+                                )}
+                            </div>
+                        )}
+                        {pendingAction?.kind === 'fortune' &&
+                            pendingAction.step === 'showHand' && (
+                                <div
+                                    style={{
+                                        position: 'fixed',
+                                        inset: 0,
+                                        background: 'rgba(0,0,0,0.7)',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        zIndex: 100,
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: 'rgba(20,20,40,0.95)',
+                                            padding: '1.5rem',
+                                            borderRadius: '12px',
+                                            width: 'min(600px, 90%)',
+                                        }}
+                                    >
+                                        <h3>{players[pendingAction.target].name} の手札</h3>
+
+                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                            {gameState.hands[pendingAction.target].map((c, idx) => (
+                                                <div key={idx} style={{ textAlign: 'center' }}>
+                                                    <img
+                                                        src={c.image}
+                                                        alt={c.name}
+                                                        style={{ width: '80px', borderRadius: '6px' }}
+                                                    />
+                                                    <div>{c.name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            style={{ marginTop: '1.5rem' }}
+                                            onClick={() => {
+                                                setPendingAction(null);
+                                                setActivePlayerIndex((prev) => (prev + 1) % players.length);
+                                            }}
+                                        >
+                                            閉じる
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
 
                         {/* Hand */}
                         <div

@@ -14,6 +14,7 @@ import {
 } from './victoryCheck';
 import { GameScreen } from './GameScreen';
 import { TitleScreen } from './TitleScreen';
+import { useFortuneTeller } from './effects/fortuneTeller';
 
 
 
@@ -176,6 +177,24 @@ export default function App() {
         gameState,
         activePlayerIndex,
         selectedIndex,
+        players
+      );
+
+      setGameState(nextState);
+      setSelectedIndex(null);
+      setPendingAction(pending);
+
+      if (endTurn) {
+        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      }
+
+      return;
+    }
+
+    if (card.no === 5) {
+      const { nextState, pending, endTurn } = useFortuneTeller(
+        gameState,
+        activePlayerIndex,
         players
       );
 
