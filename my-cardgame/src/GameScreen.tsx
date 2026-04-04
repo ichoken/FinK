@@ -193,6 +193,24 @@ export function GameScreen({
                                         <button
                                             key={i}
                                             onClick={() => {
+                                                setGameState(prev => {
+                                                    const nextHands = prev.hands.map(h => [...h]);
+                                                    const [usedCard] = nextHands[activePlayerIndex].splice(
+                                                        nextHands[activePlayerIndex].findIndex(c => c.no === 5),
+                                                        1
+                                                    );
+
+                                                    return {
+                                                        ...prev,
+                                                        hands: nextHands,
+                                                        discard: [...prev.discard, usedCard],
+                                                        log: [
+                                                            ...prev.log,
+                                                            `${players[activePlayerIndex].name} が ${players[i].name} に対して占い師を発動しました。`,
+                                                        ],
+                                                    };
+                                                });
+
                                                 setGameState(prev => ({
                                                     ...prev,
                                                     log: [
