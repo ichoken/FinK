@@ -39,6 +39,9 @@ export function GameScreen({
     setPendingAction,
     setPlayers,
     cards,
+    resolveFortuneTarget,
+    finishFortune,
+
 }) {
     return (
         <div
@@ -242,6 +245,7 @@ export function GameScreen({
                             </div>
                         )}
 
+                        {/* 占い師：対象選択 UI（ロジックなし） */}
                         {pendingAction?.kind === 'fortune' && pendingAction.step === 'chooseTarget' && (
                             <div
                                 style={{
@@ -256,60 +260,14 @@ export function GameScreen({
                                 }}
                             >
                                 <h3>占い師：対象プレイヤーを選択</h3>
+
                                 {players.map((p, i) =>
-                                    i !== activePlayerIndex &&
-                                        gameState.hands[i].length > 0 ? (
+                                    i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
                                         <button
                                             key={i}
                                             onClick={() => {
-                                                setGameState(prev => {
-                                                    const nextHands = prev.hands.map(h => [...h]);
-                                                    const [usedCard] = nextHands[activePlayerIndex].splice(
-                                                        nextHands[activePlayerIndex].findIndex(c => c.no === 5),
-                                                        1
-                                                    );
-
-                                                    return {
-                                                        ...prev,
-                                                        hands: nextHands,
-                                                        discard: [...prev.discard, usedCard],
-                                                        log: [
-                                                            ...prev.log,
-                                                            `${players[activePlayerIndex].name} が ${players[i].name} に対して占い師を発動しました。`,
-                                                        ],
-                                                    };
-                                                });
-
-                                                setGameState(prev => ({
-                                                    ...prev,
-                                                    log: [
-                                                        ...prev.log,
-                                                        `${players[activePlayerIndex].name} が ${players[i].name} に対して占い師を発動しました。`,
-                                                    ],
-                                                }));
-
-                                                // シスターがある場合 → シスター破棄して終了
-                                                const defended = trySisterDefense(
-                                                    i,               // 対象プレイヤー
-                                                    gameState,
-                                                    players,
-                                                    setGameState
-                                                );
-
-                                                if (defended) {
-                                                    // シスターが発動したのでターン終了
-                                                    setPendingAction(null);
-                                                    setActivePlayerIndex((prev) => (prev + 1) % players.length);
-                                                    return;
-                                                }
-
-                                                // シスターがない → 手札公開フェーズへ
-                                                setPendingAction({
-                                                    kind: 'fortune',
-                                                    player: activePlayerIndex,
-                                                    step: 'showHand',
-                                                    target: i,
-                                                });
+                                                // ★ ロジックは App.tsx の resolveFortuneTarget に集約
+                                                resolveFortuneTarget(i);
                                             }}
                                         >
                                             {p.name}
@@ -318,55 +276,52 @@ export function GameScreen({
                                 )}
                             </div>
                         )}
-                        {pendingAction?.kind === 'fortune' &&
-                            pendingAction.step === 'showHand' && (
+
+                        {/* 占い師：手札表示 UI（ロジックなし） */}
+                        {pendingAction?.kind === 'fortune' && pendingAction.step === 'showHand' && (
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(0,0,0,0.7)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    zIndex: 100,
+                                }}
+                            >
                                 <div
                                     style={{
-                                        position: 'fixed',
-                                        inset: 0,
-                                        background: 'rgba(0,0,0,0.7)',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        zIndex: 100,
+                                        background: 'rgba(20,20,40,0.95)',
+                                        padding: '1.5rem',
+                                        borderRadius: '12px',
+                                        width: 'min(600px, 90%)',
                                     }}
                                 >
-                                    <div
-                                        style={{
-                                            background: 'rgba(20,20,40,0.95)',
-                                            padding: '1.5rem',
-                                            borderRadius: '12px',
-                                            width: 'min(600px, 90%)',
-                                        }}
-                                    >
-                                        <h3>{players[pendingAction.target].name} の手札</h3>
+                                    <h3>{players[pendingAction.target].name} の手札</h3>
 
-                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                            {gameState.hands[pendingAction.target].map((c, idx) => (
-                                                <div key={idx} style={{ textAlign: 'center' }}>
-                                                    <img
-                                                        src={c.image}
-                                                        alt={c.name}
-                                                        style={{ width: '80px', borderRadius: '6px' }}
-                                                    />
-                                                    <div>{c.name}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            style={{ marginTop: '1.5rem' }}
-                                            onClick={() => {
-                                                setPendingAction(null);
-                                                setActivePlayerIndex((prev) => (prev + 1) % players.length);
-                                            }}
-                                        >
-                                            閉じる
-                                        </button>
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                        {gameState.hands[pendingAction.target].map((c, idx) => (
+                                            <div key={idx} style={{ textAlign: 'center' }}>
+                                                <img
+                                                    src={c.image}
+                                                    alt={c.name}
+                                                    style={{ width: '80px', borderRadius: '6px' }}
+                                                />
+                                                <div>{c.name}</div>
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
-                            )}
 
+                                    <button
+                                        style={{ marginTop: '1.5rem' }}
+                                        onClick={finishFortune} // ★ ロジックは App.tsx に集約
+                                    >
+                                        閉じる
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Hand */}
                         <div

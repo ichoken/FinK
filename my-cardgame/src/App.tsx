@@ -15,6 +15,7 @@ import {
 import { GameScreen } from './GameScreen';
 import { TitleScreen } from './TitleScreen';
 import { useFortuneTeller } from './effects/fortuneTeller';
+import { trySisterDefense } from './utils/sisterDefense';
 
 
 
@@ -152,6 +153,37 @@ export default function App() {
 
     // 次のプレイヤーへ
     setActivePlayerIndex((prev) => (prev + 1) % players.length);
+  };
+
+  const finishFortune = () => {
+    setPendingAction(null);
+    setActivePlayerIndex((prev) => (prev + 1) % players.length);
+  };
+
+  const resolveFortuneTarget = (targetIndex: number) => {
+    // ★ シスター防御
+    if (trySisterDefense(targetIndex, gameState, players, setGameState)) {
+      setPendingAction(null);
+      setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      return;
+    }
+
+    // ★ ログ
+    setGameState(prev => ({
+      ...prev,
+      log: [
+        ...prev.log,
+        `${players[activePlayerIndex].name} が ${players[targetIndex].name} に対して占い師を発動しました。`,
+      ],
+    }));
+
+    // ★ 手札公開フェーズへ
+    setPendingAction({
+      kind: 'fortune',
+      player: activePlayerIndex,
+      step: 'showHand',
+      target: targetIndex,
+    });
   };
 
   const confirmUseSelected = () => {
@@ -436,6 +468,9 @@ export default function App() {
         setPendingAction={setPendingAction}
         setPlayers={setPlayers}
         cards={cards}
+        resolveFortuneTarget={resolveFortuneTarget}
+        finishFortune={finishFortune}
+
       />
     );
   }

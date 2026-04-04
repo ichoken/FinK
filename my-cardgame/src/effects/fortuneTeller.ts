@@ -3,7 +3,6 @@ import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
 import { findAttackTargets } from '../utils/checkTargets';
 
-
 export function useFortuneTeller(
     gameState: GameState,
     activePlayerIndex: number,
@@ -13,24 +12,39 @@ export function useFortuneTeller(
     pending: PendingAction | null;
     endTurn: boolean;
 } {
-    const targets = findAttackTargets(activePlayerIndex, gameState, players);
+    // ★ 1. 使用した占い師カードを破棄
+    const nextHands = gameState.hands.map((h) => [...h]);
+    const idx = nextHands[activePlayerIndex].findIndex((c) => c.no === 5);
+    const [usedCard] = nextHands[activePlayerIndex].splice(idx, 1);
+
+    let nextState: GameState = {
+        ...gameState,
+        hands: nextHands,
+        discard: [...gameState.discard, usedCard],
+        log: [
+            ...gameState.log,
+            `${players[activePlayerIndex].name} は占い師を使用しました。`,
+        ],
+    };
+
+    // ★ 2. 対象者チェック（汎用化）
+    const targets = findAttackTargets(activePlayerIndex, nextState, players);
 
     if (targets.length === 0) {
-        // → 警告モーダルへ
         return {
-            nextState: gameState,
+            nextState,
             pending: {
                 kind: 'noTargetWarning',
                 player: activePlayerIndex,
-                cardNo: 5, // ★ 占い師
+                cardNo: 5,
             },
             endTurn: false,
         };
     }
 
-    // 対象プレイヤー選択フェーズへ
+    // ★ 3. 対象選択フェーズへ
     return {
-        nextState: gameState,
+        nextState,
         pending: {
             kind: 'fortune',
             player: activePlayerIndex,
