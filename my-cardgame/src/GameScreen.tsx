@@ -41,6 +41,7 @@ export function GameScreen({
     cards,
     resolveFortuneTarget,
     finishFortune,
+    resolveThiefTarget
 
 }) {
     return (
@@ -315,6 +316,19 @@ export function GameScreen({
                                         閉じる
                                     </button>
                                 </div>
+                            </div>
+                        )}
+                        {pendingAction?.kind === 'thief' && pendingAction.step === 'chooseTarget' && (
+                            <div className="modal">
+                                <h3>シーフ：対象プレイヤーを選択</h3>
+
+                                {players.map((p, i) =>
+                                    i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
+                                        <button key={i} onClick={() => resolveThiefTarget(i)}>
+                                            {p.name}
+                                        </button>
+                                    ) : null
+                                )}
                             </div>
                         )}
 

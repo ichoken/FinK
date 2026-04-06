@@ -17,6 +17,7 @@ import { TitleScreen } from './TitleScreen';
 import { useFortuneTeller } from './effects/fortuneTeller';
 import { trySisterDefense } from './utils/sisterDefense';
 import { discardUsedCard } from './utils/discardUsedCard';
+import { useThief } from './effects/thief';
 
 
 
@@ -162,6 +163,7 @@ export default function App() {
   };
 
   const resolveFortuneTarget = (targetIndex: number) => {
+    // ★ ログだけ先に追加
     setGameState(prev => ({
       ...prev,
       log: [
@@ -169,32 +171,15 @@ export default function App() {
         `${players[activePlayerIndex].name} が ${players[targetIndex].name} に対して占い師を発動しました。`,
       ],
     }));
-    // ★ シスター防御（ここで破棄も行う）
+
+    // ★ シスター防御（破棄もここで行う）
     const defended = trySisterDefense(
       targetIndex,
       gameState,
       players,
-      (updater) => {
-        setGameState(prev => {
-          const next = typeof updater === "function" ? updater(prev) : updater;
-
-          // ★ 使用した占い師カードを破棄
-          const nextHands = next.hands.map(h => [...h]);
-          const idx = nextHands[activePlayerIndex].findIndex(c => c.no === 5);
-          if (idx !== -1) {
-            const [usedCard] = nextHands[activePlayerIndex].splice(idx, 1);
-            return {
-              ...next,
-              hands: nextHands,
-              discard: [...next.discard, usedCard],
-            };
-          }
-
-          return next;
-        });
-      },
+      setGameState,
       () => {
-        // ★ 使用カード破棄（共通処理）
+        // 使用カード破棄（共通処理）
         setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
       }
     );
@@ -208,7 +193,6 @@ export default function App() {
     // ★ シスター防御が発動しなかった場合 → ここで破棄
     setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
 
-
     // ★ 手札公開フェーズへ
     setPendingAction({
       kind: 'fortune',
@@ -216,6 +200,53 @@ export default function App() {
       step: 'showHand',
       target: targetIndex,
     });
+  };
+
+  const resolveThiefTarget = (targetIndex: number) => {
+    // ★ 使用カード破棄（共通処理）
+    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 4));
+
+    // ★ シスター防御
+    const defended = trySisterDefense(
+      targetIndex,
+      gameState,
+      players,
+      setGameState,
+      () => {
+        // シスター防御時も破棄（共通処理）
+        setGameState(prev => discardUsedCard(prev, activePlayerIndex, 4));
+      }
+    );
+
+    if (defended) {
+      setPendingAction(null);
+      setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      return;
+    }
+
+    // ★ 奪う処理
+    setGameState(prev => {
+      const nextHands = prev.hands.map(h => [...h]);
+
+      const targetHand = nextHands[targetIndex];
+      const stolenIdx = Math.floor(Math.random() * targetHand.length);
+      const [stolenCard] = targetHand.splice(stolenIdx, 1);
+
+      nextHands[activePlayerIndex].push(stolenCard);
+
+      return {
+        ...prev,
+        hands: nextHands,
+        log: [
+          ...prev.log,
+          `${players[activePlayerIndex].name} は ${players[targetIndex].name} から ${stolenCard.name} を盗みました。`,
+        ],
+      };
+    });
+
+    // ★ ターン終了
+    setPendingAction(null);
+    setActivePlayerIndex((prev) => (prev + 1) % players.length);
   };
 
   const confirmUseSelected = () => {
@@ -246,6 +277,23 @@ export default function App() {
         gameState,
         activePlayerIndex,
         selectedIndex,
+        players
+      );
+
+      setGameState(nextState);
+      setSelectedIndex(null);
+      setPendingAction(pending);
+
+      if (endTurn) {
+        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      }
+
+      return;
+    }
+    if (card.no === 4) {
+      const { nextState, pending, endTurn } = useThief(
+        gameState,
+        activePlayerIndex,
         players
       );
 
@@ -502,6 +550,7 @@ export default function App() {
         cards={cards}
         resolveFortuneTarget={resolveFortuneTarget}
         finishFortune={finishFortune}
+        resolveThiefTarget={resolveThiefTarget}
 
       />
     );
