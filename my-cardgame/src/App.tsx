@@ -388,18 +388,18 @@ export default function App() {
     const selfIdx = pendingAction.selfCardIndex!;
     const oppIdx = pendingAction.opponentCardIndex!;
 
-    // ★ カード交換処理
     setGameState(prev => {
       const nextHands = prev.hands.map(h => [...h]);
 
       const selfCard = nextHands[activePlayerIndex][selfIdx];
       const oppCard = nextHands[target][oppIdx];
 
-      // 交換
+      // ★ 交換
       nextHands[activePlayerIndex][selfIdx] = oppCard;
       nextHands[target][oppIdx] = selfCard;
 
-      return {
+      // ★ 交換後の state を作る
+      const updatedState: GameState = {
         ...prev,
         hands: nextHands,
         log: [
@@ -407,32 +407,32 @@ export default function App() {
           `${players[activePlayerIndex].name} と ${players[target].name} は「${selfCard.name}」と「${oppCard.name}」を交換しました。`,
         ],
       };
-    });
 
+      // ★ 交換後の手札で脱落/勝利判定
+      const result = checkHandChangeCombined(updatedState, players);
 
-
-    // ★ 手札変化後の総合チェック（勝利 + 脱落）
-    const result = checkHandChangeCombined(gameState, players);
-
-    // 脱落処理
-    result.eliminated.forEach((idx) => {
-      eliminatePlayerAndUpdate({
-        playerIndex: idx,
-        players,
-        setPlayers,
-        setGameState,
+      // 脱落処理
+      result.eliminated.forEach((idx) => {
+        eliminatePlayerAndUpdate({
+          playerIndex: idx,
+          players,
+          setPlayers,
+          setGameState,
+        });
       });
-    });
 
-    // 勝利処理
-    if (result.win) {
-      handleGameOver({
-        winners: result.winners,
-        players,
-        setGameState,
-      });
-      return;
-    }
+      // 勝利処理
+      if (result.win) {
+        handleGameOver({
+          winners: result.winners,
+          players,
+          setGameState,
+        });
+        return updatedState;
+      }
+
+      return updatedState;
+    });
 
     // ★ ターン終了
     setPendingAction(null);
@@ -570,13 +570,9 @@ export default function App() {
           setGameState,
         });
 
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `脱落理由: ${elim.reason}`],
-        };
-
-        return nextState;
+        return nextState; // ★ ログは eliminatePlayerAndUpdate が出すのでここでは追加しない
       }
+
 
       // --- 4) 勝利判定（シスター4枚） ---
       const v1 = checkVictoryOnHandChange(activePlayerIndex, nextState);
@@ -651,11 +647,6 @@ export default function App() {
           setPlayers,
           setGameState,
         });
-
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `脱落理由: ${elim.reason}`],
-        };
 
         return nextState;
       }

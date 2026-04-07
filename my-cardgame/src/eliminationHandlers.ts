@@ -3,6 +3,7 @@ import type { GameState } from './types';
 import type { PlayerInfo } from './gameConfig';
 import { checkVictoryOnElimination } from './victoryCheck';
 import { handleGameOver } from './victoryHandlers';
+import { checkElimination } from './eliminationCheck';
 
 /** Fisher‑Yates シャッフル（ユーティリティ） */
 export function shuffleArray<T>(arr: T[]): T[] {
@@ -66,6 +67,7 @@ export function eliminatePlayerAndUpdate(params: {
     const { playerIndex, players, setPlayers, setGameState, onShowEliminationModal } = params;
 
     // 1) gameState を updater で更新して脱落者の手札を山札に戻す
+    // 1) gameState を updater で更新して脱落者の手札を山札に戻す
     setGameState((prev) => {
         const eliminatedHand = prev.hands[playerIndex] ?? [];
 
@@ -75,7 +77,6 @@ export function eliminatePlayerAndUpdate(params: {
                 onShowEliminationModal(playerIndex, eliminatedHand);
             } catch (e) {
                 // モーダル表示で例外が出ても処理は続ける
-                // console.warn('onShowEliminationModal failed', e);
             }
         }
 
@@ -83,7 +84,16 @@ export function eliminatePlayerAndUpdate(params: {
         const newDeck = shuffleArray(cardsToShuffleBack);
 
         const newHands = prev.hands.map((h, i) => (i === playerIndex ? [] : h));
-        const newLog = [...prev.log, `${players[playerIndex]?.name ?? `Player${playerIndex + 1}`} は脱落しました。`];
+
+        // ★ 脱落理由を取得
+        const eliminationInfo = checkElimination(playerIndex, prev);
+
+        // ★ 脱落理由をログに追加
+        const newLog = [
+            ...prev.log,
+            `${players[playerIndex]?.name ?? `Player${playerIndex + 1}`} は脱落しました。`,
+            eliminationInfo.reason ? `（理由：${eliminationInfo.reason}）` : '',
+        ];
 
         return {
             ...prev,
