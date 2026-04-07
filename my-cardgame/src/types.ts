@@ -24,6 +24,25 @@ export type PendingAction =
     player: number;
     cardNo: number;
   }
+  | {
+    kind: 'thief';
+    player: number;
+    step: 'chooseTarget';
+  }
+
+  | {
+    kind: 'magician';
+    player: number;
+    step:
+    | 'chooseTarget'        // 対象プレイヤー選択
+    | 'chooseSelfCard'      // 自分のカード選択
+    | 'chooseOpponentCard'  // 相手のカード選択（CPU or Player）
+    | 'swap';               // 交換処理
+    target?: number;          // 対象プレイヤー
+    selfCardIndex?: number;   // 自分が選んだカード
+    opponentCardIndex?: number; // 相手が選んだカード
+  }
+
   | null;
 
 // ゲーム全体の状態

@@ -1,5 +1,5 @@
 // src/GameScreen.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import titleImage from '../resource/title.jpg';
 
 import { Header } from './Header';
@@ -41,9 +41,22 @@ export function GameScreen({
     cards,
     resolveFortuneTarget,
     finishFortune,
-    resolveThiefTarget
+    resolveThiefTarget,
+    resolveMagicianTarget,
+    chooseMagicianSelfCard,
+    chooseMagicianOpponentCard,
+    resolveMagicianSwap,
 
 }) {
+    useEffect(() => {
+        if (
+            pendingAction?.kind === 'magician' &&
+            pendingAction.step === 'swap'
+        ) {
+            resolveMagicianSwap();
+        }
+    }, [pendingAction]);
+
     return (
         <div
             style={{
@@ -331,6 +344,61 @@ export function GameScreen({
                                 )}
                             </div>
                         )}
+                        {pendingAction?.kind === 'magician' &&
+                            pendingAction.step === 'chooseTarget' && (
+                                <div className="modal">
+                                    <h3>手品師：対象プレイヤーを選択</h3>
+
+                                    {players.map((p, i) =>
+                                        i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
+                                            <button key={i} onClick={() => resolveMagicianTarget(i)}>
+                                                {p.name}
+                                            </button>
+                                        ) : null
+                                    )}
+                                </div>
+                            )
+                        }
+
+                        {pendingAction?.kind === 'magician' &&
+                            pendingAction.step === 'chooseSelfCard' && (
+                                <div className="modal">
+                                    <h3>手品師：自分の手札から交換するカードを選んでください</h3>
+
+                                    <div className="hand-area">
+                                        {gameState.hands[activePlayerIndex].map((card, index) => (
+                                            <button
+                                                key={index}
+                                                onClick={() => chooseMagicianSelfCard(index)}
+                                                className="card-button"
+                                            >
+                                                {card.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        }
+                        {pendingAction?.kind === 'magician' &&
+                            pendingAction.step === 'chooseOpponentCard' &&
+                            players[pendingAction.target].kind === 'human' && (                                // ★ CPU のときは UI を出さない
+                                <div className="modal">
+                                    <h3>手品師：相手の手札から交換するカードを選んでください</h3>
+
+                                    <div className="hand-area">
+                                        {gameState.hands[pendingAction.target].map((card, index) => (
+                                            <button
+                                                key={index}
+                                                onClick={() => chooseMagicianOpponentCard(index)}
+                                                className="card-button"
+                                            >
+                                                {card.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        }
 
                         {/* Hand */}
                         <div
