@@ -14,6 +14,8 @@ import { LogView } from './LogView';
 import { ProphetPortal } from './ProphetPortal';
 import { ProphetView } from './ProphetView';
 import { trySisterDefense } from './utils/sisterDefense';
+import { Modal } from './components/Modal';
+import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは構成に合わせて
 
 export function GameScreen({
     players,
@@ -255,36 +257,18 @@ export function GameScreen({
                         )}
 
                         {/* 占い師：対象選択 UI（ロジックなし） */}
-                        {pendingAction?.kind === 'fortune' && pendingAction.step === 'chooseTarget' && (
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '20%',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    zIndex: 50,
-                                    background: 'rgba(0,0,0,0.8)',
-                                    padding: '1rem',
-                                    borderRadius: '8px',
-                                }}
-                            >
-                                <h3>占い師：対象プレイヤーを選択</h3>
-
-                                {players.map((p, i) =>
-                                    i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
-                                        <button
-                                            key={i}
-                                            onClick={() => {
-                                                // ★ ロジックは App.tsx の resolveFortuneTarget に集約
-                                                resolveFortuneTarget(i);
-                                            }}
-                                        >
-                                            {p.name}
-                                        </button>
-                                    ) : null
-                                )}
-                            </div>
-                        )}
+                        {pendingAction?.kind === 'fortune' &&
+                            pendingAction.step === 'chooseTarget' && (
+                                <PlayerSelectModal
+                                    title="占い師：対象プレイヤーを選択"
+                                    players={players
+                                        .map((p, i) => ({ ...p, index: i }))
+                                        .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
+                                    }
+                                    onSelect={(idx) => resolveFortuneTarget(idx)}
+                                />
+                            )
+                        }
 
                         {/* 占い師：手札表示 UI（ロジックなし） */}
                         {pendingAction?.kind === 'fortune' && pendingAction.step === 'showHand' && (
@@ -331,32 +315,28 @@ export function GameScreen({
                                 </div>
                             </div>
                         )}
-                        {pendingAction?.kind === 'thief' && pendingAction.step === 'chooseTarget' && (
-                            <div className="modal">
-                                <h3>シーフ：対象プレイヤーを選択</h3>
-
-                                {players.map((p, i) =>
-                                    i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
-                                        <button key={i} onClick={() => resolveThiefTarget(i)}>
-                                            {p.name}
-                                        </button>
-                                    ) : null
-                                )}
-                            </div>
-                        )}
+                        {pendingAction?.kind === 'thief' &&
+                            pendingAction.step === 'chooseTarget' && (
+                                <PlayerSelectModal
+                                    title="シーフ：対象プレイヤーを選択"
+                                    players={players
+                                        .map((p, i) => ({ ...p, index: i }))
+                                        .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
+                                    }
+                                    onSelect={(idx) => resolveThiefTarget(idx)}
+                                />
+                            )
+                        }
                         {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseTarget' && (
-                                <div className="modal">
-                                    <h3>手品師：対象プレイヤーを選択</h3>
-
-                                    {players.map((p, i) =>
-                                        i !== activePlayerIndex && gameState.hands[i].length > 0 ? (
-                                            <button key={i} onClick={() => resolveMagicianTarget(i)}>
-                                                {p.name}
-                                            </button>
-                                        ) : null
-                                    )}
-                                </div>
+                                <PlayerSelectModal
+                                    title="手品師：対象プレイヤーを選択"
+                                    players={players
+                                        .map((p, i) => ({ ...p, index: i }))
+                                        .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
+                                    }
+                                    onSelect={(idx) => resolveMagicianTarget(idx)}
+                                />
                             )
                         }
 
