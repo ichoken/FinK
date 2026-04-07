@@ -107,14 +107,23 @@ export default function App() {
   };
 
   const handleSelect = (index: number) => {
+    // 商人のカード選択
     if (pendingAction?.kind === 'merchant') {
       resolveMerchant(index);
       return;
     }
 
-    // 通常のカード選択
+    // 手品師の自分カード選択
+    if (pendingAction?.kind === 'magician' &&
+      pendingAction.step === 'chooseSelfCard') {
+      chooseMagicianSelfCard(index);
+      return;
+    }
+
+    // 通常のカード選択（カード使用モーダル）
     setSelectedIndex(index);
   };
+
   const resolveProphet = () => {
     if (!pendingAction || pendingAction.kind !== 'prophet') return;
 

@@ -341,25 +341,6 @@ export function GameScreen({
                         }
 
                         {pendingAction?.kind === 'magician' &&
-                            pendingAction.step === 'chooseSelfCard' && (
-                                <div className="modal">
-                                    <h3>手品師：自分の手札から交換するカードを選んでください</h3>
-
-                                    <div className="hand-area">
-                                        {gameState.hands[activePlayerIndex].map((card, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => chooseMagicianSelfCard(index)}
-                                                className="card-button"
-                                            >
-                                                {card.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )
-                        }
-                        {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseOpponentCard' &&
                             players[pendingAction.target].kind === 'human' && (                                // ★ CPU のときは UI を出さない
                                 <div className="modal">
@@ -396,11 +377,21 @@ export function GameScreen({
                                 selectedIndex={selectedIndex}
                                 onSelect={handleSelect}
                                 onDraw={drawOne}
-                                selectMode={pendingAction?.kind ?? null}
+                                selectMode={
+                                    pendingAction?.kind === 'merchant'
+                                        ? 'merchant'
+                                        : pendingAction?.kind === 'magician' &&
+                                            pendingAction.step === 'chooseSelfCard'
+                                            ? 'magician-self'
+                                            : null
+                                }
                                 selectableIndexes={
                                     pendingAction?.kind === 'merchant'
                                         ? gameState.hands[activePlayerIndex].map((_, i) => i)
-                                        : []
+                                        : pendingAction?.kind === 'magician' &&
+                                            pendingAction.step === 'chooseSelfCard'
+                                            ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                                            : []
                                 }
                             />
                         </div>
@@ -413,9 +404,20 @@ export function GameScreen({
                                     opacity: 0.9,
                                 }}
                             >
-                                商人の効果発動中: 山札の一番上に戻すカードを手札から1枚選んでください。
+                                商人の効果発動中: 山札の一番上に戻すカードを手札から１枚選択してください。
                             </div>
-                        )}
+                        )}{pendingAction?.kind === 'magician' &&
+                            pendingAction.step === 'chooseSelfCard' && (
+                                <div
+                                    style={{
+                                        marginTop: '0.75rem',
+                                        fontSize: '0.85rem',
+                                        opacity: 0.9,
+                                    }}
+                                >
+                                    手品師の効果発動中: 譲渡するカードを手札から１枚選択してください。
+                                </div>
+                            )}
                     </div>
 
                     {/* Right column */}

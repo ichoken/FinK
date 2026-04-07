@@ -7,7 +7,7 @@ type HandViewProps = {
   selectedIndex: number | null;
   onSelect: (index: number) => void;
   onDraw: () => void;
-  selectMode: 'merchant' | 'prophet' | null;
+  selectMode: 'merchant' | 'magician-self' | null;
   selectableIndexes: number[];
 };
 
@@ -33,8 +33,9 @@ export function HandView({
     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
       {displayHand
         .filter((card) => {
-          // ★ 選択フェーズではドローカードを非表示にする
-          if (selectMode !== null && card.type === 'draw') return false;
+          if ((selectMode === 'merchant' || selectMode === 'magician-self') && card.type === 'draw') {
+            return false;
+          }
           return true;
         })
         .map((card, index) => {
