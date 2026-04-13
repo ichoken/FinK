@@ -13,9 +13,47 @@ import { BottomLogArea } from './BottomLogArea';
 import { LogView } from './LogView';
 import { ProphetPortal } from './ProphetPortal';
 import { ProphetView } from './ProphetView';
-import { trySisterDefense } from './utils/sisterDefense';
-import { Modal } from './components/Modal';
 import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは構成に合わせて
+
+import type { CardDefinition, GameState, PendingAction } from './types';
+import type { PlayerInfo } from './gameConfig';
+
+
+type GameScreenProps = {
+    players: PlayerInfo[];
+    gameState: GameState;
+    activePlayerIndex: number;
+    selectedIndex: number | null;
+    pendingAction: PendingAction | null;
+
+    handleSelect: (index: number) => void;
+    drawOne: () => void;
+    debugDrawSpecific: (no: number) => void;
+    debugEliminateActivePlayer: () => void;
+    confirmUseSelected: () => void;
+
+    setSelectedIndex: (i: number | null) => void;
+    setActivePlayerIndex: (fn: (n: number) => number) => void;
+    setScreen: (s: string) => void;
+    startGame: () => void;
+    setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+    setPendingAction: (p: PendingAction | null) => void;
+    setPlayers: React.Dispatch<React.SetStateAction<PlayerInfo[]>>;
+    cards: CardDefinition[];
+
+    actions: {
+        resolveProphet: () => void;
+        resolveFortuneTarget: (targetIndex: number) => void;
+        finishFortune: () => void;
+        resolveThiefTarget: (targetIndex: number) => void;
+        resolveMagicianTarget: (targetIndex: number) => void;
+        chooseMagicianSelfCard: (index: number) => void;
+        chooseMagicianOpponentCard: (index: number) => void;
+        resolveMagicianSwap: () => void;
+    };
+};
+
+
 
 export function GameScreen({
     players,
@@ -24,15 +62,14 @@ export function GameScreen({
     selectedIndex,
     pendingAction,
 
-    // UI が使う関数
+    // UI が使う関数（そのまま）
     handleSelect,
     drawOne,
     debugDrawSpecific,
     debugEliminateActivePlayer,
-    resolveProphet,
     confirmUseSelected,
 
-    // state setter
+    // state setter（そのまま）
     setSelectedIndex,
     setActivePlayerIndex,
     setScreen,
@@ -41,21 +78,16 @@ export function GameScreen({
     setPendingAction,
     setPlayers,
     cards,
-    resolveFortuneTarget,
-    finishFortune,
-    resolveThiefTarget,
-    resolveMagicianTarget,
-    chooseMagicianSelfCard,
-    chooseMagicianOpponentCard,
-    resolveMagicianSwap,
 
-}) {
+    actions,
+
+}: GameScreenProps) {
     useEffect(() => {
         if (
             pendingAction?.kind === 'magician' &&
             pendingAction.step === 'swap'
         ) {
-            resolveMagicianSwap();
+            actions.resolveMagicianSwap();
         }
     }, [pendingAction]);
 
@@ -186,7 +218,7 @@ export function GameScreen({
                                                     cards: newOrder,
                                                 });
                                             }}
-                                            onConfirm={resolveProphet}
+                                            onConfirm={actions.resolveProphet}
                                         />
                                     </div>
                                 </div>
@@ -265,7 +297,7 @@ export function GameScreen({
                                         .map((p, i) => ({ ...p, index: i }))
                                         .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
                                     }
-                                    onSelect={(idx) => resolveFortuneTarget(idx)}
+                                    onSelect={(idx) => actions.resolveFortuneTarget(idx)}
                                 />
                             )
                         }
@@ -308,7 +340,7 @@ export function GameScreen({
 
                                     <button
                                         style={{ marginTop: '1.5rem' }}
-                                        onClick={finishFortune} // ★ ロジックは App.tsx に集約
+                                        onClick={actions.finishFortune} // ★ ロジックは App.tsx に集約
                                     >
                                         閉じる
                                     </button>
@@ -323,7 +355,7 @@ export function GameScreen({
                                         .map((p, i) => ({ ...p, index: i }))
                                         .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
                                     }
-                                    onSelect={(idx) => resolveThiefTarget(idx)}
+                                    onSelect={(idx) => actions.resolveThiefTarget(idx)}
                                 />
                             )
                         }
@@ -335,7 +367,7 @@ export function GameScreen({
                                         .map((p, i) => ({ ...p, index: i }))
                                         .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
                                     }
-                                    onSelect={(idx) => resolveMagicianTarget(idx)}
+                                    onSelect={(idx) => actions.resolveMagicianTarget(idx)}
                                 />
                             )
                         }
@@ -350,7 +382,7 @@ export function GameScreen({
                                         {gameState.hands[pendingAction.target].map((card, index) => (
                                             <button
                                                 key={index}
-                                                onClick={() => chooseMagicianOpponentCard(index)}
+                                                onClick={() => actions.chooseMagicianOpponentCard(index)}
                                                 className="card-button"
                                             >
                                                 {card.name}

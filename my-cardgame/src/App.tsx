@@ -448,6 +448,98 @@ export default function App() {
     setSelectedIndex(null);
   };
 
+  const actions = {
+    resolveProphet: () =>
+      resolveProphetHandler({
+        pendingAction,
+        players,
+        activePlayerIndex,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+      }),
+
+    resolveFortuneTarget: (targetIndex: number) =>
+      resolveFortuneTargetHandler({
+        targetIndex,
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+      }),
+
+    finishFortune: () =>
+      finishFortuneHandler({
+        pendingAction,
+        players,
+        setPendingAction,
+        setActivePlayerIndex,
+      }),
+
+    resolveThiefTarget: (targetIndex: number) =>
+      resolveThiefTargetHandler({
+        targetIndex,
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+      }),
+
+    resolveMagicianTarget: (targetIndex: number) =>
+      resolveMagicianTargetHandler(targetIndex, {
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+
+    chooseMagicianSelfCard: (selfIdx: number) =>
+      chooseMagicianSelfCardHandler(selfIdx, {
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+
+    chooseMagicianOpponentCard: (oppIdx: number) =>
+      chooseMagicianOpponentCardHandler(oppIdx, {
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+
+    resolveMagicianSwap: () =>
+      resolveMagicianSwapHandler({
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+  };
 
   if (screen === 'game') {
     return (
@@ -461,17 +553,6 @@ export default function App() {
         drawOne={drawOne}
         debugDrawSpecific={debugDrawSpecific}
         debugEliminateActivePlayer={debugEliminateActivePlayer}
-        resolveProphet={() =>
-          resolveProphetHandler({
-            pendingAction,
-            players,
-            activePlayerIndex,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-          })
-        }
         confirmUseSelected={confirmUseSelected}
         setSelectedIndex={setSelectedIndex}
         setActivePlayerIndex={setActivePlayerIndex}
@@ -481,92 +562,7 @@ export default function App() {
         setPendingAction={setPendingAction}
         setPlayers={setPlayers}
         cards={cards}
-        resolveFortuneTarget={(targetIndex) =>
-          resolveFortuneTargetHandler({
-            targetIndex,
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-          })
-        }
-        finishFortune={() =>
-          finishFortuneHandler({
-            pendingAction,
-            players,
-            setPendingAction,
-            setActivePlayerIndex,
-          })
-        }
-
-        resolveThiefTarget={(targetIndex) =>
-          resolveThiefTargetHandler({
-            targetIndex,
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-          })
-        }
-        resolveMagicianTarget={(targetIndex) =>
-          resolveMagicianTargetHandler(targetIndex, {
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-            setPlayers,
-          })
-        }
-
-        chooseMagicianSelfCard={(selfIdx) =>
-          chooseMagicianSelfCardHandler(selfIdx, {
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-            setPlayers,
-          })
-        }
-
-        chooseMagicianOpponentCard={(oppIdx) =>
-          chooseMagicianOpponentCardHandler(oppIdx, {
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-            setPlayers,
-          })
-        }
-
-        resolveMagicianSwap={() =>
-          resolveMagicianSwapHandler({
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-            setPlayers,
-          })
-        }
-
-
+        actions={actions}
       />
     );
   }
