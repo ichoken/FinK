@@ -20,6 +20,19 @@ import { discardUsedCard } from './utils/discardUsedCard';
 import { useThief } from './effects/thief';
 import { useMagician } from './effects/magician';
 import { checkHandChangeCombined } from './utils/checkHandChangeCombined';
+import { resolveProphetHandler } from './effects/prophetHandler';
+import { resolveMerchantHandler } from './effects/merchantHandler';
+import { resolveFortuneTargetHandler } from './effects/fortuneHandler';
+import { resolveThiefTargetHandler } from './effects/thiefHandler';
+import {
+  resolveMagicianTargetHandler,
+  chooseMagicianSelfCardHandler,
+  chooseMagicianOpponentCardAutoHandler,
+  chooseMagicianOpponentCardHandler,
+  resolveMagicianSwapHandler,
+} from './effects/magicianHandler';
+import { finishFortuneHandler } from './effects/fortuneFinishHandler';
+
 
 
 
@@ -76,7 +89,16 @@ export default function App() {
     ) {
       const target = pendingAction.target!;
       if (players[target].kind === 'cpu') {
-        chooseMagicianOpponentCardAuto();
+        chooseMagicianOpponentCardAutoHandler({
+          pendingAction,
+          activePlayerIndex,
+          players,
+          gameState,
+          setGameState,
+          setPendingAction,
+          setActivePlayerIndex,
+          setPlayers,
+        });
       }
     }
   }, [pendingAction]);
@@ -109,343 +131,36 @@ export default function App() {
   const handleSelect = (index: number) => {
     // 商人のカード選択
     if (pendingAction?.kind === 'merchant') {
-      resolveMerchant(index);
+      resolveMerchantHandler({
+        index,
+        pendingAction,
+        players,
+        setGameState,
+        setPendingAction,
+        setSelectedIndex,
+        setActivePlayerIndex,
+      });
       return;
     }
 
     // 手品師の自分カード選択
     if (pendingAction?.kind === 'magician' &&
       pendingAction.step === 'chooseSelfCard') {
-      chooseMagicianSelfCard(index);
+      chooseMagicianSelfCardHandler(index, {
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      });
       return;
     }
 
     // 通常のカード選択（カード使用モーダル）
     setSelectedIndex(index);
-  };
-
-  const resolveProphet = () => {
-    if (!pendingAction || pendingAction.kind !== 'prophet') return;
-
-    const p = pendingAction.player;
-    const ordered = pendingAction.cards;
-
-    // ★★★ 預言者カードを破棄する ★★★
-    setGameState((prev) => {
-      const nextHands = prev.hands.map((h) => [...h]);
-
-      // 使用した預言者カードを手札から1枚削除
-      const idx = nextHands[p].findIndex((c) => c.no === 1);
-      const [usedCard] = nextHands[p].splice(idx, 1);
-
-      return {
-        deck: [...ordered, ...prev.deck],
-        hands: nextHands,
-        discard: [...prev.discard, usedCard],
-        log: [
-          ...prev.log,
-          `${players[p].name} は預言者を使用し、山札の上を並び替えました。`,
-        ],
-      };
-    });
-
-    setPendingAction(null);
-    setActivePlayerIndex((prev) => (prev + 1) % players.length);
-  };
-
-  const resolveMerchant = (index: number) => {
-    if (!pendingAction || pendingAction.kind !== 'merchant') return;
-
-    const p = pendingAction.player;
-
-    setGameState((prev) => {
-      const nextHands = prev.hands.map((h) => [...h]);
-      const [chosen] = nextHands[p].splice(index, 1);
-
-      return {
-        deck: [chosen, ...prev.deck],
-        hands: nextHands,
-        discard: prev.discard,
-        log: [
-          ...prev.log,
-          `${players[p].name} は商人の効果で ${chosen.name} を山札の一番上に戻しました。`,
-        ],
-      };
-    });
-
-    setPendingAction(null);
-    setSelectedIndex(null);
-
-    // 次のプレイヤーへ
-    setActivePlayerIndex((prev) => (prev + 1) % players.length);
-  };
-
-  const finishFortune = () => {
-    setPendingAction(null);
-    setActivePlayerIndex((prev) => (prev + 1) % players.length);
-  };
-
-  const resolveFortuneTarget = (targetIndex: number) => {
-    // ★ ログだけ先に追加
-    setGameState(prev => ({
-      ...prev,
-      log: [
-        ...prev.log,
-        `${players[activePlayerIndex].name} が ${players[targetIndex].name} に対して占い師を発動しました。`,
-      ],
-    }));
-
-    // ★ シスター防御（破棄もここで行う）
-    const defended = trySisterDefense(
-      targetIndex,
-      gameState,
-      players,
-      setGameState,
-      () => {
-        // 使用カード破棄（共通処理）
-        setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
-      }
-    );
-
-    if (defended) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ シスター防御が発動しなかった場合 → ここで破棄
-    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
-
-    // ★ 手札公開フェーズへ
-    setPendingAction({
-      kind: 'fortune',
-      player: activePlayerIndex,
-      step: 'showHand',
-      target: targetIndex,
-    });
-  };
-
-  const resolveThiefTarget = (targetIndex: number) => {
-    // ★ 使用カード破棄（共通処理）
-    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 4));
-
-    // ★ シスター防御
-    const defended = trySisterDefense(
-      targetIndex,
-      gameState,
-      players,
-      setGameState,
-      () => {
-        // シスター防御時も破棄（共通処理）
-        setGameState(prev => discardUsedCard(prev, activePlayerIndex, 4));
-      }
-    );
-
-    if (defended) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ 奪う処理
-    setGameState(prev => {
-      const nextHands = prev.hands.map(h => [...h]);
-
-      const targetHand = nextHands[targetIndex];
-      const stolenIdx = Math.floor(Math.random() * targetHand.length);
-      const [stolenCard] = targetHand.splice(stolenIdx, 1);
-
-      nextHands[activePlayerIndex].push(stolenCard);
-
-      return {
-        ...prev,
-        hands: nextHands,
-        log: [
-          ...prev.log,
-          `${players[activePlayerIndex].name} は ${players[targetIndex].name} から ${stolenCard.name} を盗みました。`,
-        ],
-      };
-    });
-
-    // ★ ターン終了
-    setPendingAction(null);
-    setActivePlayerIndex((prev) => (prev + 1) % players.length);
-  };
-
-  const resolveMagicianTarget = (targetIndex: number) => {
-    // ★ 使用カード破棄（共通処理）
-    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 3));
-
-    // ★ 手品師発動ログ
-    setGameState(prev => ({
-      ...prev,
-      log: [
-        ...prev.log,
-        `${players[activePlayerIndex].name} が ${players[targetIndex].name} に対して手品師を発動しました。`,
-      ],
-    }));
-
-    // ★ 対象プレイヤーの手札が0 → 終了
-    if (gameState.hands[targetIndex].length === 0) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ 自分の手札が0 → 終了
-    if (gameState.hands[activePlayerIndex].length === 0) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ シスター防御
-    const defended = trySisterDefense(
-      targetIndex,
-      gameState,
-      players,
-      setGameState,
-      () => {
-        // シスター防御時も使用カード破棄（共通処理）
-        setGameState(prev => discardUsedCard(prev, activePlayerIndex, 3));
-      }
-    );
-
-    if (defended) {
-      // シスターが発動したので何もせず終了
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-
-    // ★ 必ず Step3（自分のカード選択）へ進む
-    setPendingAction({
-      kind: 'magician',
-      player: activePlayerIndex,
-      step: 'chooseSelfCard',
-      target: targetIndex,
-    });
-  };
-  const chooseMagicianSelfCard = (selfCardIndex: number) => {
-    if (!pendingAction || pendingAction.kind !== 'magician') return;
-    // ★ 自分のカード選択ログ
-    setGameState(prev => ({
-      ...prev,
-      log: [
-        ...prev.log,
-        `${players[activePlayerIndex].name} は「${gameState.hands[activePlayerIndex][selfCardIndex].name}」を交換候補として選択しました。`,
-      ],
-    }));
-    setPendingAction({
-      kind: 'magician',
-      player: activePlayerIndex,
-      step: 'chooseOpponentCard',
-      target: pendingAction.target,
-      selfCardIndex,
-    });
-  };
-
-  const chooseMagicianOpponentCardAuto = () => {
-    if (!pendingAction || pendingAction.kind !== 'magician') return;
-
-    const target = pendingAction.target!;
-    const opponentHand = gameState.hands[target];
-
-    // CPU のカード選択アルゴリズム（仮：ランダム）
-    const chosen = Math.floor(Math.random() * opponentHand.length);
-    // ★ CPU のカード選択ログ
-    setGameState(prev => ({
-      ...prev,
-      log: [
-        ...prev.log,
-        `${players[pendingAction.target!].name}（CPU）は「${gameState.hands[pendingAction.target!][chosen].name}」を交換候補として選択しました。`,
-      ],
-    }));
-
-    setPendingAction({
-      kind: 'magician',
-      player: activePlayerIndex,
-      step: 'swap',
-      target,
-      selfCardIndex: pendingAction.selfCardIndex,
-      opponentCardIndex: chosen,
-    });
-  };
-  const chooseMagicianOpponentCard = (opponentCardIndex: number) => {
-    if (!pendingAction || pendingAction.kind !== 'magician') return;
-    // ★ 相手のカード選択ログ
-    setGameState(prev => ({
-      ...prev,
-      log: [
-        ...prev.log,
-        `${players[pendingAction.target!].name} は「${gameState.hands[pendingAction.target!][opponentCardIndex].name}」を交換候補として選択しました。`,
-      ],
-    }));
-    setPendingAction({
-      kind: 'magician',
-      player: activePlayerIndex,
-      step: 'swap',
-      target: pendingAction.target,
-      selfCardIndex: pendingAction.selfCardIndex,
-      opponentCardIndex,
-    });
-  };
-  const resolveMagicianSwap = () => {
-    if (!pendingAction || pendingAction.kind !== 'magician') return;
-
-    const target = pendingAction.target!;
-    const selfIdx = pendingAction.selfCardIndex!;
-    const oppIdx = pendingAction.opponentCardIndex!;
-
-    setGameState(prev => {
-      const nextHands = prev.hands.map(h => [...h]);
-
-      const selfCard = nextHands[activePlayerIndex][selfIdx];
-      const oppCard = nextHands[target][oppIdx];
-
-      // ★ 交換
-      nextHands[activePlayerIndex][selfIdx] = oppCard;
-      nextHands[target][oppIdx] = selfCard;
-
-      // ★ 交換後の state を作る
-      const updatedState: GameState = {
-        ...prev,
-        hands: nextHands,
-        log: [
-          ...prev.log,
-          `${players[activePlayerIndex].name} と ${players[target].name} は「${selfCard.name}」と「${oppCard.name}」を交換しました。`,
-        ],
-      };
-
-      // ★ 交換後の手札で脱落/勝利判定
-      const result = checkHandChangeCombined(updatedState, players);
-
-      // 脱落処理
-      result.eliminated.forEach((idx) => {
-        eliminatePlayerAndUpdate({
-          playerIndex: idx,
-          players,
-          setPlayers,
-          setGameState,
-        });
-      });
-
-      // 勝利処理
-      if (result.win) {
-        handleGameOver({
-          winners: result.winners,
-          players,
-          setGameState,
-        });
-        return updatedState;
-      }
-
-      return updatedState;
-    });
-
-    // ★ ターン終了
-    setPendingAction(null);
-    setActivePlayerIndex((prev) => (prev + 1) % players.length);
   };
 
   const confirmUseSelected = () => {
@@ -746,7 +461,17 @@ export default function App() {
         drawOne={drawOne}
         debugDrawSpecific={debugDrawSpecific}
         debugEliminateActivePlayer={debugEliminateActivePlayer}
-        resolveProphet={resolveProphet}
+        resolveProphet={() =>
+          resolveProphetHandler({
+            pendingAction,
+            players,
+            activePlayerIndex,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+          })
+        }
         confirmUseSelected={confirmUseSelected}
         setSelectedIndex={setSelectedIndex}
         setActivePlayerIndex={setActivePlayerIndex}
@@ -756,13 +481,90 @@ export default function App() {
         setPendingAction={setPendingAction}
         setPlayers={setPlayers}
         cards={cards}
-        resolveFortuneTarget={resolveFortuneTarget}
-        finishFortune={finishFortune}
-        resolveThiefTarget={resolveThiefTarget}
-        resolveMagicianTarget={resolveMagicianTarget}
-        chooseMagicianSelfCard={chooseMagicianSelfCard}
-        chooseMagicianOpponentCard={chooseMagicianOpponentCard}
-        resolveMagicianSwap={resolveMagicianSwap}
+        resolveFortuneTarget={(targetIndex) =>
+          resolveFortuneTargetHandler({
+            targetIndex,
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+          })
+        }
+        finishFortune={() =>
+          finishFortuneHandler({
+            pendingAction,
+            players,
+            setPendingAction,
+            setActivePlayerIndex,
+          })
+        }
+
+        resolveThiefTarget={(targetIndex) =>
+          resolveThiefTargetHandler({
+            targetIndex,
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+          })
+        }
+        resolveMagicianTarget={(targetIndex) =>
+          resolveMagicianTargetHandler(targetIndex, {
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+            setPlayers,
+          })
+        }
+
+        chooseMagicianSelfCard={(selfIdx) =>
+          chooseMagicianSelfCardHandler(selfIdx, {
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+            setPlayers,
+          })
+        }
+
+        chooseMagicianOpponentCard={(oppIdx) =>
+          chooseMagicianOpponentCardHandler(oppIdx, {
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+            setPlayers,
+          })
+        }
+
+        resolveMagicianSwap={() =>
+          resolveMagicianSwapHandler({
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+            setPlayers,
+          })
+        }
 
 
       />
