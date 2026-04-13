@@ -3,7 +3,7 @@ import { cards, type CardDefinition } from './cards';
 import { createDefaultPlayers, type PlayerInfo, PLAYER_COUNT, HUMAN_PLAYER_INDEX } from './gameConfig';
 import { useMerchant } from './effects/merchant';
 import { useProphet } from './effects/prophet';
-import type { GameState, PendingAction } from './types';
+import type { GameState, PendingAction, Screen } from './types';
 import { eliminatePlayerAndUpdate } from './eliminationHandlers';
 import { checkElimination } from './eliminationCheck';
 import { handleGameOver } from './victoryHandlers';
@@ -36,7 +36,7 @@ import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 
 
 
-type Screen = 'title' | 'game';
+
 
 function buildInitialDeck(): CardDefinition[] {
   const deck: CardDefinition[] = [];
@@ -439,6 +439,7 @@ export default function App() {
       const nextHands = prev.hands.map((h) => [...h]);
       const [played] = nextHands[activePlayerIndex].splice(index, 1);
       return {
+        ...prev,
         deck: prev.deck,
         hands: nextHands,
         discard: [...prev.discard, played],

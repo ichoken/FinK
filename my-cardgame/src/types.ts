@@ -3,6 +3,8 @@
 import type { CardDefinition } from './cards';
 import type { PlayerInfo } from './gameConfig';
 
+export type Screen = 'title' | 'game';
+
 // カード効果の種類（今後追加していく）
 export type PendingActionKind =
   | 'merchant'
@@ -15,32 +17,53 @@ export type PendingActionKind =
 
 // pendingAction の型
 export type PendingAction =
-  | { kind: PendingActionKind; player: number }
-  | { kind: 'prophet'; player: number; cards: CardDefinition[] }
-  | { kind: 'merchant'; player: number; cards: CardDefinition[] }
-  | { kind: 'fortune'; player: number; cards: CardDefinition[] }
+  // 商人
   | {
-    kind: 'noTargetWarning';
+    kind: 'merchant';
     player: number;
-    cardNo: number;
   }
+
+  // 占い師（prophet）
+  | {
+    kind: 'prophet';
+    player: number;
+    cards: CardDefinition[];
+  }
+
+  // 占い師（fortune）
+  | {
+    kind: 'fortune';
+    player: number;
+    step: 'chooseTarget' | 'showHand';
+    target?: number;
+  }
+
+  // シーフ
   | {
     kind: 'thief';
     player: number;
     step: 'chooseTarget';
   }
 
+  // 手品師
   | {
     kind: 'magician';
     player: number;
     step:
-    | 'chooseTarget'        // 対象プレイヤー選択
-    | 'chooseSelfCard'      // 自分のカード選択
-    | 'chooseOpponentCard'  // 相手のカード選択（CPU or Player）
-    | 'swap';               // 交換処理
-    target?: number;          // 対象プレイヤー
-    selfCardIndex?: number;   // 自分が選んだカード
-    opponentCardIndex?: number; // 相手が選んだカード
+    | 'chooseTarget'
+    | 'chooseSelfCard'
+    | 'chooseOpponentCard'
+    | 'swap';
+    target?: number;
+    selfCardIndex?: number;
+    opponentCardIndex?: number;
+  }
+
+  // 対象なし警告
+  | {
+    kind: 'noTargetWarning';
+    player: number;
+    cardNo: number;
   }
 
   | null;

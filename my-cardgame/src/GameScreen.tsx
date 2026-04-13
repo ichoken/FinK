@@ -15,7 +15,7 @@ import { ProphetPortal } from './ProphetPortal';
 import { ProphetView } from './ProphetView';
 import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは構成に合わせて
 
-import type { CardDefinition, GameState, PendingAction } from './types';
+import type { CardDefinition, GameState, PendingAction, Screen } from './types';
 import type { PlayerInfo } from './gameConfig';
 
 
@@ -34,7 +34,7 @@ type GameScreenProps = {
 
     setSelectedIndex: (i: number | null) => void;
     setActivePlayerIndex: (fn: (n: number) => number) => void;
-    setScreen: (s: string) => void;
+    setScreen: React.Dispatch<React.SetStateAction<Screen>>;
     startGame: () => void;
     setGameState: React.Dispatch<React.SetStateAction<GameState>>;
     setPendingAction: (p: PendingAction | null) => void;
@@ -303,7 +303,7 @@ export function GameScreen({
                         }
 
                         {/* 占い師：手札表示 UI（ロジックなし） */}
-                        {pendingAction?.kind === 'fortune' && pendingAction.step === 'showHand' && (
+                        {pendingAction?.kind === 'fortune' && pendingAction.step === 'showHand' && pendingAction.target !== undefined && (
                             <div
                                 style={{
                                     position: 'fixed',
@@ -374,7 +374,9 @@ export function GameScreen({
 
                         {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseOpponentCard' &&
-                            players[pendingAction.target].kind === 'human' && (                                // ★ CPU のときは UI を出さない
+                            pendingAction.target !== undefined &&
+                            players[pendingAction.target].kind === 'human' &&
+                            (                                // ★ CPU のときは UI を出さない
                                 <div className="modal">
                                     <h3>手品師：相手の手札から交換するカードを選んでください</h3>
 

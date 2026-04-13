@@ -1,13 +1,20 @@
 // src/effects/useFortuneTeller.ts
-import type { GameState } from '../types';
+import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
 import { findAttackTargets } from '../utils/checkTargets';
+
+type FortuneResult = {
+    nextState: GameState;
+    pending: PendingAction;
+    endTurn: boolean;
+};
 
 export function useFortuneTeller(
     gameState: GameState,
     activePlayerIndex: number,
     players: PlayerInfo[]
-) {
+): FortuneResult {
+
     // ★ 対象者チェックのみ
     const targets = findAttackTargets(activePlayerIndex, gameState, players);
 
