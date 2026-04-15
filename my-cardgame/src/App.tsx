@@ -7,6 +7,7 @@ import type { GameState, PendingAction, Screen } from './types';
 import { eliminatePlayerAndUpdate } from './eliminationHandlers';
 import { checkElimination } from './eliminationCheck';
 import { handleGameOver } from './victoryHandlers';
+import { applyForcedEffect } from './utils/forcedEffect';
 import {
   checkVictoryOnHandChange,
   checkVictoryOnElimination,
@@ -33,6 +34,7 @@ import {
   resolveMagicianSwapHandler,
 } from './effects/magicianHandler';
 import { resolveAngelHandler } from './effects/angelHandler';
+import { resolveConfusionHandler } from './effects/confusionHandler';
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 
 
@@ -304,6 +306,19 @@ export default function App() {
         ],
       };
 
+      if (drawn.type === 'force') {
+        nextState = applyForcedEffect(
+          nextState,
+          activePlayerIndex,
+          players,
+          setGameState,
+          setPendingAction
+        );
+
+        // 混乱は手札公開だけなので、ここで return して OK
+        return nextState;
+      }
+
       // --- 3) 脱落判定 ---
       const elim = checkElimination(activePlayerIndex, nextState);
       if (elim.eliminated) {
@@ -381,6 +396,19 @@ export default function App() {
           `デバッグ: ${players[activePlayerIndex].name} に No.${picked.no} ${picked.name} を追加しました。`,
         ],
       };
+
+      if (picked.type === 'force') {
+        nextState = applyForcedEffect(
+          nextState,
+          activePlayerIndex,
+          players,
+          setGameState,
+          setPendingAction
+        );
+
+        // 混乱は手札公開だけなので、ここで return して OK
+        return nextState;
+      }
 
       // --- 2) 脱落判定 ---
       const elim = checkElimination(activePlayerIndex, nextState);
@@ -572,6 +600,15 @@ export default function App() {
         setPendingAction,
         setActivePlayerIndex,
         setPlayers,
+      }),
+    resolveConfusion: () =>
+      resolveConfusionHandler({
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setPendingAction,
+        setActivePlayerIndex,
       }),
   };
 

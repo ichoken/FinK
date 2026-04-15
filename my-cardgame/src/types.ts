@@ -69,6 +69,10 @@ export type PendingAction =
     kind: 'angel',
     player: number,
   }
+  | {
+    kind: 'confusion',
+    player: number, // CPU の index
+  }
 
   | null;
 

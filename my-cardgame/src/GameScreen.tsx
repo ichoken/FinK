@@ -51,6 +51,7 @@ type GameScreenProps = {
         chooseMagicianOpponentCard: (index: number) => void;
         resolveMagicianSwap: () => void;
         resolveAngel: (discardIndex: number) => void;
+        resolveConfusion: () => void;
     };
 };
 
@@ -410,6 +411,21 @@ export function GameScreen({
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+                        {pendingAction?.kind === 'confusion' && (
+                            <div className="modal">
+                                <h3>混乱：{players[pendingAction.player].name} の手札</h3>
+
+                                <div className="hand-cards">
+                                    {gameState.hands[pendingAction.player].map((card, idx) => (
+                                        <div key={idx} className="card-view">
+                                            {card.name}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button onClick={actions.resolveConfusion}>OK</button>
                             </div>
                         )}
 

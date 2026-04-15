@@ -47,7 +47,7 @@ export function resolveAngelHandler({
     // Step3: 強制発動 ON → 即発動
     // --------------------------------------
     if (chosenCard.type === 'force') {
-        setGameState(prev => applyForcedEffect(prev, activePlayerIndex, chosenCard));
+        setGameState(prev => applyForcedEffect(prev, activePlayerIndex, players, setGameState, setPendingAction));
 
         // 強制発動後の勝利/脱落判定
         setGameState(prev => {
