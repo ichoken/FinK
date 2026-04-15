@@ -73,6 +73,7 @@ export type PendingAction =
     kind: 'confusion',
     player: number, // CPU の index
   }
+  | { kind: 'seizure'; player: number; step: 'chooseTarget' | 'chooseCard'; target?: number }
 
   | null;
 

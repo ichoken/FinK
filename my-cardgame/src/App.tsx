@@ -35,6 +35,7 @@ import {
 } from './effects/magicianHandler';
 import { resolveAngelHandler } from './effects/angelHandler';
 import { resolveConfusionHandler } from './effects/confusionHandler';
+import { resolveSeizureHandler } from './effects/seizureHandler';
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 
 
@@ -609,6 +610,27 @@ export default function App() {
         gameState,
         setPendingAction,
         setActivePlayerIndex,
+      }),
+    chooseSeizureTarget: (targetIndex: number) => {
+      setPendingAction({
+        kind: 'seizure',
+        player: activePlayerIndex,
+        step: 'chooseCard',
+        target: targetIndex,
+      });
+    },
+
+    resolveSeizure: (cardIndex: number) =>
+      resolveSeizureHandler({
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+        cardIndex,
       }),
   };
 

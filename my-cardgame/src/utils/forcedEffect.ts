@@ -12,10 +12,25 @@ export function applyForcedEffect(
 ): GameState {
     let next = { ...gameState };
 
-    const card = next.hands[activePlayerIndex].find(c => c.no === 11);
-    // ※ 呼び出し元でカードを渡す場合はこの行は不要
+    const drawnCard = next.hands[activePlayerIndex].slice(-1)[0];
+    if (!drawnCard) return next;
 
-    switch (card?.no) {
+    switch (drawnCard?.no) {
+        // --------------------------------------
+        // No.10 差し押さえ（強制発動）
+        // --------------------------------------
+        case 10: {
+            // 使用カード（差し押さえ No.10）を墓地へ
+            setGameState(prev => discardUsedCard(prev, activePlayerIndex, 10));
+
+            // 対象選択 UI を出す
+            setPendingAction({
+                kind: 'seizure',
+                player: activePlayerIndex,
+                step: 'chooseTarget',
+            });
+            return next;
+        }
         // --------------------------------------
         // No.11 混乱（強制発動）
         // --------------------------------------

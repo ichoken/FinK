@@ -17,6 +17,7 @@ import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは
 
 import type { CardDefinition, GameState, PendingAction, Screen } from './types';
 import type { PlayerInfo } from './gameConfig';
+import { Modal } from './components/Modal';
 
 
 type GameScreenProps = {
@@ -52,6 +53,8 @@ type GameScreenProps = {
         resolveMagicianSwap: () => void;
         resolveAngel: (discardIndex: number) => void;
         resolveConfusion: () => void;
+        chooseSeizureTarget: (targetIndex: number) => void;
+        resolveSeizure: (cardIndex: number) => void;
     };
 };
 
@@ -428,6 +431,34 @@ export function GameScreen({
                                 <button onClick={actions.resolveConfusion}>OK</button>
                             </div>
                         )}
+                        {pendingAction?.kind === 'seizure' && pendingAction.step === 'chooseTarget' && (
+                            <Modal>
+                                <h3>差し押さえ：対象プレイヤーを選択</h3>
+
+                                {players.map((p, idx) => {
+                                    if (idx === pendingAction.player) return null;
+                                    if (gameState.hands[idx].length >= 4) return null; // 4枚以上は対象外
+
+                                    return (
+                                        <button key={idx} onClick={() => actions.chooseSeizureTarget(idx)}>
+                                            {p.name}
+                                        </button>
+                                    );
+                                })}
+                            </Modal>
+                        )}
+                        {pendingAction?.kind === 'seizure' && pendingAction.step === 'chooseCard' && (
+                            <Modal>
+                                <h3>差し押さえ：渡すカードを選択</h3>
+
+                                {gameState.hands[pendingAction.player].map((card, idx) => (
+                                    <button key={idx} onClick={() => actions.resolveSeizure(idx)}>
+                                        {card.name}
+                                    </button>
+                                ))}
+                            </Modal>
+                        )}
+
 
                         {/* Hand */}
                         <div
