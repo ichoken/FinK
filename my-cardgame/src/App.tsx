@@ -19,6 +19,7 @@ import { trySisterDefense } from './utils/sisterDefense';
 import { discardUsedCard } from './utils/discardUsedCard';
 import { useThief } from './effects/thief';
 import { useMagician } from './effects/magician';
+import { useAngel } from './effects/angel';
 import { checkHandChangeCombined } from './utils/checkHandChangeCombined';
 import { resolveProphetHandler } from './effects/prophetHandler';
 import { resolveMerchantHandler } from './effects/merchantHandler';
@@ -31,6 +32,7 @@ import {
   chooseMagicianOpponentCardHandler,
   resolveMagicianSwapHandler,
 } from './effects/magicianHandler';
+import { resolveAngelHandler } from './effects/angelHandler';
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 
 
@@ -253,6 +255,24 @@ export default function App() {
 
       if (endTurn) {
         setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      }
+
+      return;
+    }
+
+    // --- Angel (No.8) ---
+    if (card.no === 8) {
+      const { nextState, pending, endTurn } = useAngel(
+        gameState,
+        activePlayerIndex
+      );
+
+      setGameState(nextState);
+      setSelectedIndex(null);
+      setPendingAction(pending);
+
+      if (endTurn) {
+        setActivePlayerIndex(prev => (prev + 1) % players.length);
       }
 
       return;
@@ -531,6 +551,19 @@ export default function App() {
 
     resolveMagicianSwap: () =>
       resolveMagicianSwapHandler({
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+
+    resolveAngel: (discardIndex: number) =>
+      resolveAngelHandler({
+        discardIndex,
         pendingAction,
         activePlayerIndex,
         players,

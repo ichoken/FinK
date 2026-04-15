@@ -50,6 +50,7 @@ type GameScreenProps = {
         chooseMagicianSelfCard: (index: number) => void;
         chooseMagicianOpponentCard: (index: number) => void;
         resolveMagicianSwap: () => void;
+        resolveAngel: (discardIndex: number) => void;
     };
 };
 
@@ -394,6 +395,23 @@ export function GameScreen({
                                 </div>
                             )
                         }
+                        {pendingAction?.kind === 'angel' && (
+                            <div className="modal">
+                                <h3>天使：墓地からカードを選択</h3>
+
+                                <div className="discard-list">
+                                    {gameState.discard.map((card, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => actions.resolveAngel(idx)}
+                                            className="discard-card-button"
+                                        >
+                                            {card.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Hand */}
                         <div

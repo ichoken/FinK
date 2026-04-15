@@ -65,6 +65,10 @@ export type PendingAction =
     player: number;
     cardNo: number;
   }
+  | {
+    kind: 'angel',
+    player: number,
+  }
 
   | null;
 
