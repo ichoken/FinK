@@ -37,6 +37,7 @@ import { resolveAngelHandler } from './effects/angelHandler';
 import { resolveConfusionHandler } from './effects/confusionHandler';
 import { resolveSeizureHandler } from './effects/seizureHandler';
 import { resolveFinKHandler } from './effects/finkHandler';
+import { resolveBlackMagicianHandler } from './effects/blackMagicianHandler'
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 
 
@@ -279,6 +280,17 @@ export default function App() {
         setActivePlayerIndex(prev => (prev + 1) % players.length);
       }
 
+      return;
+    }
+    if (card.no === 6) {
+      resolveBlackMagicianHandler({
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+      });
       return;
     }
 
