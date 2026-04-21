@@ -1,4 +1,5 @@
 import { cpuResolveProphet } from "./cpuProphet";
+import { cpuResolveThief } from "./cpuThief";
 // 他のカードもここに import していく
 
 export function handleCpuPendingAction(args) {
@@ -8,7 +9,9 @@ export function handleCpuPendingAction(args) {
         case "prophet":
             cpuResolveProphet(args);
             break;
-
+        case "thief":
+            cpuResolveThief(args);
+            break;
         // 他のカードもここに追加
     }
 }
