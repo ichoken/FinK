@@ -1,5 +1,5 @@
 // src/effects/prophetHandler.ts
-import type { GameState, PendingAction } from '../types';
+import type { GameState, PendingAction, CardDefinition } from '../types';
 import type { PlayerInfo } from '../gameConfig';
 
 type ResolveProphetArgs = {
@@ -10,6 +10,7 @@ type ResolveProphetArgs = {
     setGameState: (updater: (prev: GameState) => GameState) => void;
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (n: number) => number) => void;
+    orderedCards?: CardDefinition[];
 };
 
 export function resolveProphetHandler({
@@ -20,11 +21,12 @@ export function resolveProphetHandler({
     setGameState,
     setPendingAction,
     setActivePlayerIndex,
+    orderedCards,
 }: ResolveProphetArgs) {
     if (!pendingAction || pendingAction.kind !== 'prophet') return;
 
     const p = pendingAction.player;
-    const ordered = pendingAction.cards;
+    const ordered = orderedCards ?? pendingAction.cards;
 
     setGameState((prev) => {
         const nextHands = prev.hands.map((h) => [...h]);

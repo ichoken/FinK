@@ -39,6 +39,7 @@ import { resolveSeizureHandler } from './effects/seizureHandler';
 import { resolveFinKHandler } from './effects/finkHandler';
 import { resolveBlackMagicianHandler } from './effects/blackMagicianHandler'
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
+import { handleCpuPendingAction } from './cpu/handleCpuPendingAction';
 
 
 
@@ -62,6 +63,8 @@ function buildInitialDeck(): CardDefinition[] {
 
   return deck;
 }
+
+
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
@@ -90,25 +93,56 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (
-      pendingAction?.kind === 'magician' &&
-      pendingAction.step === 'chooseOpponentCard'
-    ) {
-      const target = pendingAction.target!;
-      if (players[target].kind === 'cpu') {
-        chooseMagicianOpponentCardAutoHandler({
-          pendingAction,
-          activePlayerIndex,
-          players,
-          gameState,
-          setGameState,
-          setPendingAction,
-          setActivePlayerIndex,
-          setPlayers,
-        });
-      }
+    if (!pendingAction) return;
+
+    const currentPlayer = players[activePlayerIndex];
+    if (currentPlayer.kind == 'human') return;
+
+    // CPU が pendingAction を処理する
+    handleCpuPendingAction({
+      pendingAction,
+      activePlayerIndex,
+      players,
+      gameState,
+      setGameState,
+      setPendingAction,
+      setActivePlayerIndex,
+      setPlayers,
+    });
+  }, [pendingAction, activePlayerIndex]);
+
+  /*
+  function handleCpuPendingAction() {
+    if (!pendingAction)
+      return;
+
+    switch (pendingAction.kind) {
+      case 'prophet':
+        cpuResolveProphet();
+        break;
+
+      case 'magician':
+        if (pendingAction.step === 'chooseOpponentCard') {
+          chooseMagicianOpponentCardAutoHandler({
+            pendingAction,
+            activePlayerIndex,
+            players,
+            gameState,
+            setGameState,
+            setPendingAction,
+            setActivePlayerIndex,
+            setPlayers,
+          });
+        }
+        break;
+      default:
+      // 未定義
+
+      // 他のカードもここに追加していく
     }
-  }, [pendingAction]);
+  }
+*/
+
 
   const startGame = () => {
     setGameState(() => {
