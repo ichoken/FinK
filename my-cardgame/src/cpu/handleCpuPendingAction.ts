@@ -3,6 +3,7 @@ import { cpuResolveThief } from "./cpuThief";
 import { cpuResolveMerchant } from "./cpuMerchant";
 import { cpuResolveFortune } from "./cpuFortune";
 import { cpuResolveAngel } from "./cpuAngel";
+import { cpuResolveMagician } from "./cpuMagician";
 // 他のカードもここに import していく
 
 export function handleCpuPendingAction(args) {
@@ -23,6 +24,9 @@ export function handleCpuPendingAction(args) {
             break;
         case "angel":
             cpuResolveAngel(args);
+            break;
+        case "magician":
+            cpuResolveMagician(args);
             break;
         // 他のカードもここに追加
     }

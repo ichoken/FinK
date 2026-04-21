@@ -111,39 +111,6 @@ export default function App() {
     });
   }, [pendingAction, activePlayerIndex]);
 
-  /*
-  function handleCpuPendingAction() {
-    if (!pendingAction)
-      return;
-
-    switch (pendingAction.kind) {
-      case 'prophet':
-        cpuResolveProphet();
-        break;
-
-      case 'magician':
-        if (pendingAction.step === 'chooseOpponentCard') {
-          chooseMagicianOpponentCardAutoHandler({
-            pendingAction,
-            activePlayerIndex,
-            players,
-            gameState,
-            setGameState,
-            setPendingAction,
-            setActivePlayerIndex,
-            setPlayers,
-          });
-        }
-        break;
-      default:
-      // 未定義
-
-      // 他のカードもここに追加していく
-    }
-  }
-*/
-
-
   const startGame = () => {
     setGameState(() => {
       const deck = buildInitialDeck();
