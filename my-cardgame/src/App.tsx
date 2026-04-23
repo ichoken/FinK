@@ -65,6 +65,14 @@ function buildInitialDeck(): CardDefinition[] {
   return deck;
 }
 
+function drawInitialNonForce(deck: CardDefinition[]): CardDefinition | undefined {
+  // 初回ドロー（初期配布）は強制発動（混乱/差し押さえ）を除外して引く
+  const idx = deck.findIndex((c) => c.type !== 'force' && c.no !== 10 && c.no !== 11);
+  if (idx === -1) return undefined;
+  const [picked] = deck.splice(idx, 1);
+  return picked;
+}
+
 
 
 export default function App() {
@@ -80,7 +88,7 @@ export default function App() {
     // 各プレイヤーに2枚ずつ配る（プレイヤー順に配布）
     for (let p = 0; p < PLAYER_COUNT; p += 1) {
       for (let i = 0; i < 2; i += 1) {
-        const card = deck.shift();
+        const card = drawInitialNonForce(deck);
         if (card) hands[p].push(card);
       }
     }
@@ -299,7 +307,7 @@ export default function App() {
       const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
       for (let p = 0; p < PLAYER_COUNT; p += 1) {
         for (let i = 0; i < 2; i += 1) {
-          const card = deck.shift();
+          const card = drawInitialNonForce(deck);
           if (card) hands[p].push(card);
         }
       }
