@@ -59,6 +59,14 @@ export type PendingAction =
     opponentCardIndex?: number;
   }
 
+  // 催眠術師
+  | {
+    kind: 'hypnotist';
+    player: number;
+    step: 'chooseTarget';
+    returnTo: number;
+  }
+
   // 対象なし警告
   | {
     kind: 'noTargetWarning';

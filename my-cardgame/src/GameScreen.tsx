@@ -48,6 +48,7 @@ type GameScreenProps = {
         finishFortune: () => void;
         resolveThiefTarget: (targetIndex: number) => void;
         resolveMagicianTarget: (targetIndex: number) => void;
+        resolveHypnotistTarget: (targetIndex: number) => void;
         chooseMagicianSelfCard: (index: number) => void;
         chooseMagicianOpponentCard: (index: number) => void;
         chooseMagicianOpponentCardAuto: () => void;
@@ -381,6 +382,18 @@ export function GameScreen({
                                 />
                             )
                         }
+                        {/* 催眠術師：対象選択 UI（人間発動時のみ） */}
+                        {pendingAction?.kind === 'hypnotist' &&
+                            pendingAction.step === 'chooseTarget' && (
+                                <PlayerSelectModal
+                                    title="催眠術師：対象プレイヤーを選択"
+                                    players={players
+                                        .map((p, i) => ({ ...p, index: i }))
+                                        .filter((p) => p.index !== pendingAction.player && gameState.hands[p.index].length > 0)
+                                    }
+                                    onSelect={(idx) => actions.resolveHypnotistTarget(idx)}
+                                />
+                            )}
                         {/* 手品師：対象選択 UI */}
                         {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseTarget' && (

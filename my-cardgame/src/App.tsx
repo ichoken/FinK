@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cards, type CardDefinition } from './cards';
 import { createDefaultPlayers, type PlayerInfo, PLAYER_COUNT, HUMAN_PLAYER_INDEX } from './gameConfig';
 import { useMerchant } from './effects/merchant';
@@ -40,6 +40,7 @@ import { resolveFinKHandler } from './effects/finkHandler';
 import { resolveBlackMagicianHandler } from './effects/blackMagicianHandler'
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 import { handleCpuPendingAction } from './cpu/handleCpuPendingAction';
+import { listHypnotistTargets, resolveHypnotistOnTarget } from './effects/hypnotistHandler';
 
 
 
@@ -72,6 +73,7 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [players, setPlayers] = useState<PlayerInfo[]>(() => createDefaultPlayers());
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+  const [hypnosisStack, setHypnosisStack] = useState<Array<{ returnTo: number }>>([]);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
@@ -92,6 +94,16 @@ export default function App() {
     };
   });
 
+  // setGameState が非同期でも「最新 state」を参照できるようにする
+  const gameStateRef = useRef<GameState>(gameState);
+  const playersRef = useRef<PlayerInfo[]>(players);
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
   useEffect(() => {
     if (!pendingAction) return;
 
@@ -106,10 +118,180 @@ export default function App() {
       gameState,
       setGameState,
       setPendingAction,
-      setActivePlayerIndex,
+      setActivePlayerIndex: setActivePlayerIndexControlled,
       setPlayers,
     });
   }, [pendingAction]);
+
+  // 催眠術師などの「強制発動」連鎖が終わったら、最初の発動者の次へ手番を戻す
+  useEffect(() => {
+    if (pendingAction !== null) return;
+    if (hypnosisStack.length === 0) return;
+
+    const top = hypnosisStack[hypnosisStack.length - 1];
+    setHypnosisStack((prev) => prev.slice(0, -1));
+    setActivePlayerIndex(() => top.returnTo);
+    setSelectedIndex(null);
+  }, [pendingAction, hypnosisStack.length]);
+
+  // 催眠中は、通常効果の「ターン進行」を抑止する（最後にまとめて戻す）
+  const setActivePlayerIndexControlled = (fn: (n: number) => number) => {
+    if (hypnosisStack.length > 0) return;
+    setActivePlayerIndex(fn);
+  };
+
+  const forcePlayFromHand = (playerIndex: number, cardIndex: number, returnTo: number) => {
+    // 強制発動中は、一時的に「そのプレイヤーが発動した扱い」で処理を進める
+    setHypnosisStack((prev) => [...prev, { returnTo }]);
+    setActivePlayerIndex(() => playerIndex);
+    setSelectedIndex(null);
+
+    const currentPlayers = playersRef.current;
+    const snapshot = gameStateRef.current.hands[playerIndex]?.[cardIndex];
+    if (!snapshot) return;
+
+    // FinK / 黒魔術師は副作用ハンドラなので先に分岐（ログを上書きしない）
+    if (snapshot.no === 6) {
+      resolveBlackMagicianHandler({
+        activePlayerIndex: playerIndex,
+        players: currentPlayers,
+        gameState: gameStateRef.current,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
+      });
+      return;
+    }
+
+    if (snapshot.no === 12) {
+      resolveFinKHandler({
+        activePlayerIndex: playerIndex,
+        players: currentPlayers,
+        gameState: gameStateRef.current,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
+        setPlayers,
+      });
+      return;
+    }
+
+    // 催眠術師（No.9）は強制発動でも効果を実行する
+    if (snapshot.no === 9) {
+      const returnToNext = returnTo;
+
+      // 使用カードは必ず墓地へ
+      setGameState((prev) => discardUsedCard(prev, playerIndex, 9));
+
+      const stateForTargets = gameStateRef.current; // 対象抽出は発動者の手札変化に影響されない
+      const targets = listHypnotistTargets(playerIndex, stateForTargets, currentPlayers);
+
+      if (targets.length === 0) {
+        setGameState((prev) => ({
+          ...prev,
+          log: [...prev.log, `${currentPlayers[playerIndex].name} は催眠術師を強制発動しましたが、対象者がいませんでした。`],
+        }));
+        setPendingAction(null);
+        return;
+      }
+
+      // 強制発動された本人が human の場合は対象選択へ（「本人が発動した扱い」）
+      if (currentPlayers[playerIndex].kind === 'human') {
+        setPendingAction({
+          kind: 'hypnotist',
+          player: playerIndex,
+          step: 'chooseTarget',
+          returnTo: returnToNext,
+        });
+        return;
+      }
+
+      // CPU の場合はランダム対象
+      const targetIndex = targets[Math.floor(Math.random() * targets.length)];
+      const { didForce } = resolveHypnotistOnTarget({
+        sourcePlayerIndex: playerIndex,
+        targetIndex,
+        players: currentPlayers,
+        gameState: stateForTargets,
+        setGameState,
+        onForcePlayFromHand: (forcedPlayerIndex, cardIndex) => {
+          forcePlayFromHand(forcedPlayerIndex, cardIndex, returnToNext);
+        },
+      });
+
+      setPendingAction(null);
+      if (!didForce) {
+        // 防御などで不発ならチェーンを進める（最終復帰は hypnosisStack が処理）
+        return;
+      }
+
+      return;
+    }
+
+    // 「直前の state(prev)」に対して効果を適用し、催眠術師ログが消えないようにする
+    setGameState((prev) => {
+      const card = prev.hands[playerIndex]?.[cardIndex];
+      if (!card) return prev;
+
+      if (card.no === 1) {
+        const res = useProphet(prev, playerIndex, currentPlayers);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.no === 2) {
+        const res = useMerchant(prev, playerIndex, cardIndex, currentPlayers);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.no === 3) {
+        const res = useMagician(prev, playerIndex, currentPlayers);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.no === 4) {
+        const res = useThief(prev, playerIndex, currentPlayers);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.no === 5) {
+        const res = useFortuneTeller(prev, playerIndex, currentPlayers);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.no === 8) {
+        const res = useAngel(prev, playerIndex);
+        setPendingAction(res.pending);
+        if (res.endTurn) setPendingAction(null);
+        return res.nextState;
+      }
+
+      if (card.type === 'force') {
+        // drawOne と同様の強制効果処理に委譲（pendingAction が出る場合あり）
+        return applyForcedEffect(prev, playerIndex, currentPlayers, setGameState, setPendingAction);
+      }
+
+      // 未対応カードは通常の「使用（墓地へ）」扱いだけ行う
+      const nextHands = prev.hands.map((h) => [...h]);
+      const [played] = nextHands[playerIndex].splice(cardIndex, 1);
+      setPendingAction(null);
+      return {
+        ...prev,
+        hands: nextHands,
+        discard: [...prev.discard, played],
+        log: [...prev.log, `${currentPlayers[playerIndex].name} がカードを使用しました。（${played.name}）`],
+      };
+    });
+  };
 
   const startGame = () => {
     setGameState(() => {
@@ -146,7 +328,7 @@ export default function App() {
         setGameState,
         setPendingAction,
         setSelectedIndex,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       });
       return;
     }
@@ -161,7 +343,7 @@ export default function App() {
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       });
       return;
@@ -281,6 +463,62 @@ export default function App() {
         setActivePlayerIndex(prev => (prev + 1) % players.length);
       }
 
+      return;
+    }
+
+    if (card.no === 9) {
+      const returnTo = (activePlayerIndex + 1) % players.length;
+      setSelectedIndex(null);
+
+      // 使用した催眠術師は必ず墓地へ
+      setGameState((prev) => discardUsedCard(prev, activePlayerIndex, 9));
+
+      // player 発動時：対象は選択式
+      if (players[activePlayerIndex].kind === 'human') {
+        const targets = listHypnotistTargets(activePlayerIndex, gameState, players);
+        if (targets.length === 0) {
+          setGameState((prev) => ({
+            ...prev,
+            log: [...prev.log, `${players[activePlayerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+          }));
+          setActivePlayerIndex((prev) => (prev + 1) % players.length);
+          return;
+        }
+
+        setPendingAction({
+          kind: 'hypnotist',
+          player: activePlayerIndex,
+          step: 'chooseTarget',
+          returnTo,
+        });
+
+        return;
+      }
+
+      // CPU 発動時：対象はランダム
+      const targets = listHypnotistTargets(activePlayerIndex, gameState, players);
+      if (targets.length === 0) {
+        setGameState((prev) => ({
+          ...prev,
+          log: [...prev.log, `${players[activePlayerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+        }));
+        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+        return;
+      }
+
+      const targetIndex = targets[Math.floor(Math.random() * targets.length)];
+      const { didForce } = resolveHypnotistOnTarget({
+        sourcePlayerIndex: activePlayerIndex,
+        targetIndex,
+        players,
+        gameState,
+        setGameState,
+        onForcePlayFromHand: (targetPlayerIndex, cardIndex) => {
+          forcePlayFromHand(targetPlayerIndex, cardIndex, returnTo);
+        },
+      });
+
+      if (!didForce) setActivePlayerIndex((prev) => (prev + 1) % players.length);
       return;
     }
     if (card.no === 6) {
@@ -534,19 +772,19 @@ export default function App() {
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
 
     resolveFortuneTarget: (targetIndex: number) =>
       resolveFortuneTargetHandler({
         targetIndex,
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
 
     finishFortune: () =>
@@ -554,78 +792,99 @@ export default function App() {
         pendingAction,
         players,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
 
     resolveThiefTarget: (targetIndex: number) =>
       resolveThiefTargetHandler({
         targetIndex,
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
+
+    resolveHypnotistTarget: (targetIndex: number) => {
+      if (!pendingAction || pendingAction.kind !== 'hypnotist') return;
+
+      const sourcePlayerIndex = pendingAction.player;
+      const returnTo = pendingAction.returnTo;
+
+      const { didForce } = resolveHypnotistOnTarget({
+        sourcePlayerIndex,
+        targetIndex,
+        players,
+        gameState,
+        setGameState,
+        onForcePlayFromHand: (forcedPlayerIndex, cardIndex) => {
+          forcePlayFromHand(forcedPlayerIndex, cardIndex, returnTo);
+        },
+      });
+
+      setPendingAction(null);
+      if (!didForce) setActivePlayerIndexControlled(() => returnTo);
+    },
 
     resolveMagicianTarget: (targetIndex: number) =>
       resolveMagicianTargetHandler(targetIndex, {
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
 
     chooseMagicianSelfCard: (selfIdx: number) =>
       chooseMagicianSelfCardHandler(selfIdx, {
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
 
     chooseMagicianOpponentCard: (oppIdx: number) =>
       chooseMagicianOpponentCardHandler(oppIdx, {
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
 
     chooseMagicianOpponentCardAuto: () =>
       chooseMagicianOpponentCardAutoHandler({
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
 
     resolveMagicianSwap: () =>
       resolveMagicianSwapHandler({
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
 
@@ -638,7 +897,7 @@ export default function App() {
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
       }),
     resolveConfusion: () =>
@@ -648,7 +907,7 @@ export default function App() {
         players,
         gameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
     chooseSeizureTarget: (targetIndex: number) => {
       setPendingAction({
@@ -667,7 +926,7 @@ export default function App() {
         gameState,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
         cardIndex,
       }),
