@@ -1,6 +1,6 @@
 export type CardType = 'attack' | 'other' | 'force' | 'draw';
 
-export interface CardDefinition {
+export type CardDefinition = {
   no: number;
   name: string;
   count: number;
@@ -8,6 +8,7 @@ export interface CardDefinition {
   effectSummary: string;
 }
 
+// 最小限のカードセット（仕様書に基づく）
 export const cards: CardDefinition[] = [
   {
     no: 1,
@@ -95,3 +96,19 @@ export const cards: CardDefinition[] = [
   },
 ];
 
+export function buildInitialDeck(): CardDefinition[] {
+  const deck: CardDefinition[] = [];
+  cards.forEach((card) => {
+    for (let i = 0; i < card.count; i += 1) {
+      deck.push(card);
+    }
+  });
+
+  // Fisher–Yates shuffle
+  for (let i = deck.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  return deck;
+}

@@ -47,22 +47,35 @@ import { listHypnotistTargets, resolveHypnotistOnTarget } from './effects/hypnot
 
 
 
-function buildInitialDeck(): CardDefinition[] {
-  const deck: CardDefinition[] = [];
-
-  cards.forEach((card) => {
-    for (let i = 0; i < card.count; i += 1) {
-      deck.push(card);
+/**
+ * checkVictoryAndElimination: 簡易実装（詳細ルールは別途拡張）
+ * - 山札0か、シスター4枚所持、他プレイヤー全員脱落などはここで判定する
+ */
+function checkVictoryAndElimination(state: GameState): { winnerId: number | null; eliminated: number[] } {
+  // 簡易: 山札0かつ FinK 所持者が勝利
+  if (state.deck.length === 0) {
+    for (const p of state.players) {
+      if (p.hand.some((c) => c.no === 12)) {
+        return { winnerId: p.id, eliminated: [] };
+      }
     }
-  });
-
-  // Fisher–Yates shuffle
-  for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  return deck;
+  // シスター4枚で勝利
+  for (const p of state.players) {
+    const sisterCount = p.hand.filter((c) => c.no === 7).length;
+    if (sisterCount >= 4) {
+      return { winnerId: p.id, eliminated: [] };
+    }
+  }
+
+  // 他プレイヤー全員脱落
+  const alive = state.players.filter((p) => !p.isEliminated);
+  if (alive.length === 1) {
+    return { winnerId: alive[0].id, eliminated: [] };
+  }
+
+  return { winnerId: null, eliminated: [] };
 }
 
 function drawInitialNonForce(deck: CardDefinition[]): CardDefinition | undefined {
@@ -657,6 +670,7 @@ export default function App() {
 
       const nextDeck = [...prev.deck];
       const [picked] = nextDeck.splice(indexInDeck, 1);
+      player.hand = [...player.hand, picked];
 
       const nextHands = prev.hands.map((h) => [...h]);
       nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], picked];
