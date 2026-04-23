@@ -88,6 +88,15 @@ export function cpuResolveMagician({
 
     // Step3: 相手カード選択フェーズ（CPU 自動）
     if (pendingAction.step === "chooseOpponentCard") {
+        // CPU → player の場合：player が放出するカードは UI で選択させる
+        // （pendingAction は維持して待機）
+        if (
+            pendingAction.target !== undefined &&
+            players[pendingAction.target]?.kind === "human"
+        ) {
+            return;
+        }
+
         chooseMagicianOpponentCardAutoHandler({
             pendingAction,
             activePlayerIndex,

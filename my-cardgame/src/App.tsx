@@ -95,13 +95,13 @@ export default function App() {
   useEffect(() => {
     if (!pendingAction) return;
 
-    const currentPlayer = players[activePlayerIndex];
-    if (currentPlayer.kind == 'human') return;
+    const actingPlayer = pendingAction.player;
+    if (players[actingPlayer].kind !== 'cpu') return;
 
     // CPU が pendingAction を処理する
     handleCpuPendingAction({
       pendingAction,
-      activePlayerIndex,
+      activePlayerIndex: actingPlayer,
       players,
       gameState,
       setGameState,
@@ -109,7 +109,7 @@ export default function App() {
       setActivePlayerIndex,
       setPlayers,
     });
-  }, [pendingAction, activePlayerIndex]);
+  }, [pendingAction]);
 
   const startGame = () => {
     setGameState(() => {
@@ -595,6 +595,18 @@ export default function App() {
 
     chooseMagicianOpponentCard: (oppIdx: number) =>
       chooseMagicianOpponentCardHandler(oppIdx, {
+        pendingAction,
+        activePlayerIndex,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex,
+        setPlayers,
+      }),
+
+    chooseMagicianOpponentCardAuto: () =>
+      chooseMagicianOpponentCardAutoHandler({
         pendingAction,
         activePlayerIndex,
         players,

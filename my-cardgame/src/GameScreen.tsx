@@ -50,6 +50,7 @@ type GameScreenProps = {
         resolveMagicianTarget: (targetIndex: number) => void;
         chooseMagicianSelfCard: (index: number) => void;
         chooseMagicianOpponentCard: (index: number) => void;
+        chooseMagicianOpponentCardAuto: () => void;
         resolveMagicianSwap: () => void;
         resolveAngel: (discardIndex: number) => void;
         resolveConfusion: () => void;
@@ -88,11 +89,26 @@ export function GameScreen({
 
 }: GameScreenProps) {
     useEffect(() => {
+        if (!pendingAction) return;
+        if (pendingAction.kind !== 'magician') return;
+
+        // CPU の pendingAction は App.tsx 側で処理する（ここで自動実行しない）
+        if (players[pendingAction.player]?.kind !== 'human') return;
+
+        // player -> CPU のときは、CPU 側の交換候補カードをランダム選択して進める
         if (
-            pendingAction?.kind === 'magician' &&
-            pendingAction.step === 'swap'
+            pendingAction.step === 'chooseOpponentCard' &&
+            pendingAction.target !== undefined &&
+            players[pendingAction.target]?.kind === 'cpu'
         ) {
+            actions.chooseMagicianOpponentCardAuto();
+            return;
+        }
+
+        // 交換処理は（人間発動時は）即実行でOK
+        if (pendingAction.step === 'swap') {
             actions.resolveMagicianSwap();
+            return;
         }
     }, [pendingAction]);
 
@@ -365,24 +381,25 @@ export function GameScreen({
                                 />
                             )
                         }
+                        {/* 手品師：対象選択 UI */}
                         {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseTarget' && (
                                 <PlayerSelectModal
                                     title="手品師：対象プレイヤーを選択"
                                     players={players
                                         .map((p, i) => ({ ...p, index: i }))
-                                        .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
+                                        // ★ activePlayerIndex ではなく pendingAction.player を使う
+                                        .filter((p) => p.index !== pendingAction.player && gameState.hands[p.index].length > 0)
                                     }
                                     onSelect={(idx) => actions.resolveMagicianTarget(idx)}
                                 />
-                            )
-                        }
+                            )}
 
+                        {/* 手品師：相手カード選択 UI（対象が human のときだけ表示） */}
                         {pendingAction?.kind === 'magician' &&
                             pendingAction.step === 'chooseOpponentCard' &&
                             pendingAction.target !== undefined &&
-                            players[pendingAction.target].kind === 'human' &&
-                            (                                // ★ CPU のときは UI を出さない
+                            players[pendingAction.target].kind === 'human' && (
                                 <div className="modal">
                                     <h3>手品師：相手の手札から交換するカードを選んでください</h3>
 
@@ -398,8 +415,8 @@ export function GameScreen({
                                         ))}
                                     </div>
                                 </div>
-                            )
-                        }
+                            )}
+
                         {pendingAction?.kind === 'angel' && (
                             <div className="modal">
                                 <h3>天使：墓地からカードを選択</h3>
