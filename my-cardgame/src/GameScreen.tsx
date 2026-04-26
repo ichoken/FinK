@@ -1,6 +1,6 @@
 // src/GameScreen.tsx
 import React, { useEffect } from 'react';
-import titleImage from '../resource/title.jpg';
+import titleImage from '/resource/title.jpg';
 
 import { Header } from './Header';
 import { MainLayout } from './MainLayout';
@@ -370,6 +370,7 @@ export function GameScreen({
                                 </div>
                             </div>
                         )}
+
                         {pendingAction?.kind === 'thief' &&
                             pendingAction.step === 'chooseTarget' && (
                                 <PlayerSelectModal

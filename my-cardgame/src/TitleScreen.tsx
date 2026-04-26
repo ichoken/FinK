@@ -1,7 +1,7 @@
 // src/TitleScreen.tsx
 import React from 'react';
-import titleImage from '../resource/title.jpg';
-import mainBtnImage from '../resource/mainBtn.png';
+import titleImage from '/resource/title.jpg';
+import mainBtnImage from '/resource/mainBtn.png';
 
 export function TitleScreen({ startGame }: { startGame: () => void }) {
     return (

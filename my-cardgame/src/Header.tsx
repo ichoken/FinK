@@ -1,6 +1,6 @@
 // src/Header.tsx
 import React from 'react';
-import titleImage from '../resource/title.jpg';
+import titleImage from '/resource/title.jpg';
 
 type Player = {
   name: string;
