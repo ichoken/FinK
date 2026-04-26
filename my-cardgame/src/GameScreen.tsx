@@ -1,6 +1,7 @@
 // src/GameScreen.tsx
 import React, { useEffect } from 'react';
 import titleImage from '/resource/title.jpg';
+import playmatImage from '/resource/playmat.jpg';
 
 import { Header } from './Header';
 import { MainLayout } from './MainLayout';
@@ -123,7 +124,7 @@ export function GameScreen({
                 padding: 0,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundImage: `url(${titleImage})`,
+                backgroundImage: `url(${playmatImage})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
