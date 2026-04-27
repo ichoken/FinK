@@ -19,6 +19,7 @@ import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは
 import type { CardDefinition, GameState, PendingAction, Screen } from './types';
 import type { PlayerInfo } from './gameConfig';
 import { Modal } from './components/Modal';
+import { CardActivationOverlay, type CardActivationPreview } from './components/CardActivationOverlay';
 
 
 type GameScreenProps = {
@@ -27,6 +28,7 @@ type GameScreenProps = {
     activePlayerIndex: number;
     selectedIndex: number | null;
     pendingAction: PendingAction | null;
+    activationPreview: CardActivationPreview | null;
 
     handleSelect: (index: number) => void;
     drawOne: () => void;
@@ -69,6 +71,7 @@ export function GameScreen({
     activePlayerIndex,
     selectedIndex,
     pendingAction,
+    activationPreview,
 
     // UI が使う関数（そのまま）
     handleSelect,
@@ -132,6 +135,8 @@ export function GameScreen({
                 textShadow: '0 3px 10px rgba(0, 0, 0, 0.8)',
             }}
         >
+            <CardActivationOverlay preview={activationPreview} players={players} />
+
             {/* ★ 勝利画面 */}
             {gameState.gameOver && (
                 <div

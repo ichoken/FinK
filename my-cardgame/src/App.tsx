@@ -41,6 +41,7 @@ import { resolveBlackMagicianHandler } from './effects/blackMagicianHandler'
 import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 import { handleCpuPendingAction } from './cpu/handleCpuPendingAction';
 import { listHypnotistTargets, resolveHypnotistOnTarget } from './effects/hypnotistHandler';
+import type { CardActivationPreview } from './components/CardActivationOverlay';
 
 
 
@@ -81,6 +82,7 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [players, setPlayers] = useState<PlayerInfo[]>(() => createDefaultPlayers());
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+  const [activationPreview, setActivationPreview] = useState<CardActivationPreview | null>(null);
   const [hypnosisStack, setHypnosisStack] = useState<Array<{ returnTo: number }>>([]);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
@@ -118,17 +120,20 @@ export default function App() {
     const actingPlayer = pendingAction.player;
     if (players[actingPlayer].kind !== 'cpu') return;
 
-    // CPU が pendingAction を処理する
-    handleCpuPendingAction({
-      pendingAction,
-      activePlayerIndex: actingPlayer,
-      players,
-      gameState,
-      setGameState,
-      setPendingAction,
-      setActivePlayerIndex: setActivePlayerIndexControlled,
-      setPlayers,
-    });
+    // CPU が pendingAction を処理する（演出待ちを挟めるように async で呼ぶ）
+    (async () => {
+      await handleCpuPendingAction({
+        pendingAction,
+        activePlayerIndex: actingPlayer,
+        players,
+        gameState,
+        setGameState,
+        setPendingAction,
+        setActivePlayerIndex: setActivePlayerIndexControlled,
+        setPlayers,
+        onShowActivation: showActivationByNo,
+      });
+    })();
   }, [pendingAction]);
 
   // 催眠術師などの「強制発動」連鎖が終わったら、最初の発動者の次へ手番を戻す
@@ -146,6 +151,22 @@ export default function App() {
   const setActivePlayerIndexControlled = (fn: (n: number) => number) => {
     if (hypnosisStack.length > 0) return;
     setActivePlayerIndex(fn);
+  };
+
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  const getCardByNo = (no: number) => cards.find((c) => c.no === no);
+
+  const showActivation = async (card: CardDefinition, sourceIndex: number, targetIndex?: number) => {
+    setActivationPreview({ card, sourceIndex, targetIndex });
+    await sleep(2000);
+    setActivationPreview(null);
+  };
+
+  const showActivationByNo = async (cardNo: number, sourceIndex: number, targetIndex?: number) => {
+    const card = getCardByNo(cardNo);
+    if (!card) return;
+    await showActivation(card, sourceIndex, targetIndex);
   };
 
   const forcePlayFromHand = (playerIndex: number, cardIndex: number, returnTo: number) => {
@@ -361,10 +382,13 @@ export default function App() {
     setSelectedIndex(index);
   };
 
-  const confirmUseSelected = () => {
+  const confirmUseSelected = async () => {
     if (selectedIndex === null) return;
     const card = gameState.hands[activePlayerIndex][selectedIndex];
     if (!card) return;
+
+    // 発動演出（対象がいないカードは「対象なし」で表示）
+    await showActivation(card, activePlayerIndex);
 
     if (card.no === 1) {
       const { nextState, pending, endTurn } = useProphet(
@@ -783,17 +807,20 @@ export default function App() {
         setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
 
-    resolveFortuneTarget: (targetIndex: number) =>
+    resolveFortuneTarget: async (targetIndex: number) => {
+      const source = pendingAction?.player ?? activePlayerIndex;
+      await showActivationByNo(5, source, targetIndex);
       resolveFortuneTargetHandler({
         targetIndex,
         pendingAction,
-        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
+        activePlayerIndex: source,
         players,
         gameState,
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
-      }),
+      });
+    },
 
     finishFortune: () =>
       finishFortuneHandler({
@@ -803,23 +830,28 @@ export default function App() {
         setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
 
-    resolveThiefTarget: (targetIndex: number) =>
+    resolveThiefTarget: async (targetIndex: number) => {
+      const source = pendingAction?.player ?? activePlayerIndex;
+      await showActivationByNo(4, source, targetIndex);
       resolveThiefTargetHandler({
         targetIndex,
         pendingAction,
-        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
+        activePlayerIndex: source,
         players,
         gameState,
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
-      }),
+      });
+    },
 
-    resolveHypnotistTarget: (targetIndex: number) => {
+    resolveHypnotistTarget: async (targetIndex: number) => {
       if (!pendingAction || pendingAction.kind !== 'hypnotist') return;
 
       const sourcePlayerIndex = pendingAction.player;
       const returnTo = pendingAction.returnTo;
+
+      await showActivationByNo(9, sourcePlayerIndex, targetIndex);
 
       const { didForce } = resolveHypnotistOnTarget({
         sourcePlayerIndex,
@@ -836,17 +868,20 @@ export default function App() {
       if (!didForce) setActivePlayerIndexControlled(() => returnTo);
     },
 
-    resolveMagicianTarget: (targetIndex: number) =>
+    resolveMagicianTarget: async (targetIndex: number) => {
+      const source = pendingAction?.player ?? activePlayerIndex;
+      await showActivationByNo(3, source, targetIndex);
       resolveMagicianTargetHandler(targetIndex, {
         pendingAction,
-        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
+        activePlayerIndex: source,
         players,
         gameState,
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
-      }),
+      });
+    },
 
     chooseMagicianSelfCard: (selfIdx: number) =>
       chooseMagicianSelfCardHandler(selfIdx, {
@@ -917,7 +952,8 @@ export default function App() {
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
       }),
-    chooseSeizureTarget: (targetIndex: number) => {
+    chooseSeizureTarget: async (targetIndex: number) => {
+      await showActivationByNo(10, activePlayerIndex, targetIndex);
       setPendingAction({
         kind: 'seizure',
         player: activePlayerIndex,
@@ -948,6 +984,7 @@ export default function App() {
         activePlayerIndex={activePlayerIndex}
         selectedIndex={selectedIndex}
         pendingAction={pendingAction}
+        activationPreview={activationPreview}
         handleSelect={handleSelect}
         drawOne={drawOne}
         debugDrawSpecific={debugDrawSpecific}

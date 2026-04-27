@@ -13,9 +13,10 @@ export type CpuFortuneArgs = {
     setGameState: (fn: (prev: GameState) => GameState) => void;
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (prev: number) => number) => void;
+    onShowActivation?: (cardNo: number, sourceIndex: number, targetIndex?: number) => Promise<void>;
 };
 
-export function cpuResolveFortune({
+export async function cpuResolveFortune({
     pendingAction,
     activePlayerIndex,
     players,
@@ -23,6 +24,7 @@ export function cpuResolveFortune({
     setGameState,
     setPendingAction,
     setActivePlayerIndex,
+    onShowActivation,
 }: CpuFortuneArgs) {
 
     // ★ 型ガード
@@ -44,6 +46,10 @@ export function cpuResolveFortune({
 
         // ★ CPU はランダムに対象を選ぶ
         const target = targets[Math.floor(Math.random() * targets.length)];
+
+        if (onShowActivation) {
+            await onShowActivation(5, activePlayerIndex, target);
+        }
 
         resolveFortuneTargetHandler({
             targetIndex: target,

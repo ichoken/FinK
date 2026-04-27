@@ -13,9 +13,10 @@ export type CpuThiefArgs = {
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (prev: number) => number) => void;
     setPlayers: (fn: (prev: PlayerInfo[]) => PlayerInfo[]) => void;
+    onShowActivation?: (cardNo: number, sourceIndex: number, targetIndex?: number) => Promise<void>;
 };
 
-export function cpuResolveThief({
+export async function cpuResolveThief({
     pendingAction,
     activePlayerIndex,
     players,
@@ -24,6 +25,7 @@ export function cpuResolveThief({
     setPendingAction,
     setActivePlayerIndex,
     setPlayers,
+    onShowActivation,
 }: CpuThiefArgs) {
 
     // ★ 型ガード
@@ -41,6 +43,10 @@ export function cpuResolveThief({
 
     // ★ CPU はランダムに対象を選ぶ
     const target = targets[Math.floor(Math.random() * targets.length)];
+
+    if (onShowActivation) {
+        await onShowActivation(4, activePlayerIndex, target);
+    }
 
     // ★ resolveThiefTargetHandler を呼ぶ
     resolveThiefTargetHandler({

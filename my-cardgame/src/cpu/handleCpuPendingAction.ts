@@ -6,28 +6,22 @@ import { cpuResolveAngel } from "./cpuAngel";
 import { cpuResolveMagician } from "./cpuMagician";
 // 他のカードもここに import していく
 
-export function handleCpuPendingAction(args) {
+export function handleCpuPendingAction(args: any) {
     const { pendingAction } = args;
 
     switch (pendingAction.kind) {
         case "prophet":
-            cpuResolveProphet(args);
-            break;
+            return cpuResolveProphet(args);
         case "thief":
-            cpuResolveThief(args);
-            break;
+            return cpuResolveThief(args);
         case "merchant":
-            cpuResolveMerchant(args);
-            break;
+            return cpuResolveMerchant(args);
         case "fortune":
-            cpuResolveFortune(args);
-            break;
+            return cpuResolveFortune(args);
         case "angel":
-            cpuResolveAngel(args);
-            break;
+            return cpuResolveAngel(args);
         case "magician":
-            cpuResolveMagician(args);
-            break;
+            return cpuResolveMagician(args);
         // 他のカードもここに追加
     }
 }

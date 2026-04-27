@@ -20,9 +20,10 @@ export type CpuMagicianArgs = {
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (prev: number) => number) => void;
     setPlayers: (fn: (prev: PlayerInfo[]) => PlayerInfo[]) => void;
+    onShowActivation?: (cardNo: number, sourceIndex: number, targetIndex?: number) => Promise<void>;
 };
 
-export function cpuResolveMagician({
+export async function cpuResolveMagician({
     pendingAction,
     activePlayerIndex,
     players,
@@ -31,6 +32,7 @@ export function cpuResolveMagician({
     setPendingAction,
     setActivePlayerIndex,
     setPlayers,
+    onShowActivation,
 }: CpuMagicianArgs) {
     if (!pendingAction || pendingAction.kind !== "magician") return;
 
@@ -46,6 +48,10 @@ export function cpuResolveMagician({
         }
 
         const target = targets[Math.floor(Math.random() * targets.length)];
+
+        if (onShowActivation) {
+            await onShowActivation(3, activePlayerIndex, target);
+        }
 
         resolveMagicianTargetHandler(target, {
             pendingAction,
