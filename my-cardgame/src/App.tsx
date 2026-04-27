@@ -387,8 +387,17 @@ export default function App() {
     const card = gameState.hands[activePlayerIndex][selectedIndex];
     if (!card) return;
 
-    // 発動演出（対象がいないカードは「対象なし」で表示）
-    await showActivation(card, activePlayerIndex);
+    // プレイヤー発動時：相手（対象プレイヤー）を選ぶカードは「選択前の演出」を出さない。
+    // （対象確定後の演出は resolve◯◯Target 側で表示する）
+    const needsTargetPlayer =
+      card.no === 3 || // 手品師
+      card.no === 4 || // シーフ
+      card.no === 5 || // 占い師
+      card.no === 9;   // 催眠術師
+
+    if (!needsTargetPlayer) {
+      await showActivation(card, activePlayerIndex);
+    }
 
     if (card.no === 1) {
       const { nextState, pending, endTurn } = useProphet(
