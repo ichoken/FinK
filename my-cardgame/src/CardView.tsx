@@ -1,6 +1,5 @@
 import type { CardDefinition } from './cards';
-
-const drawImg = "/resource/card/00.jpg"
+import drawImg from "/resource/card/00.jpg";
 
 interface CardViewProps {
   card: CardDefinition;
