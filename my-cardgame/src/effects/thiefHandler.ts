@@ -13,6 +13,7 @@ type ResolveThiefArgs = {
     setGameState: (updater: (prev: GameState) => GameState) => void;
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (n: number) => number) => void;
+    onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
 export function resolveThiefTargetHandler({
@@ -24,6 +25,7 @@ export function resolveThiefTargetHandler({
     setGameState,
     setPendingAction,
     setActivePlayerIndex,
+    onShowCardMessageOverlay,
 }: ResolveThiefArgs) {
     if (!pendingAction || pendingAction.kind !== 'thief') return;
 
@@ -38,7 +40,8 @@ export function resolveThiefTargetHandler({
         setGameState,
         () => {
             setGameState(prev => discardUsedCard(prev, activePlayerIndex, 4));
-        }
+        },
+        onShowCardMessageOverlay,
     );
 
     if (defended) {

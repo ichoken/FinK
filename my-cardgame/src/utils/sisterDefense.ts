@@ -2,13 +2,14 @@
 import type { GameState } from '../types';
 import type { PlayerInfo } from '../gameConfig';
 
-export function trySisterDefense(
+export async function trySisterDefense(
     targetIndex: number,
     gameState: GameState,
     players: PlayerInfo[],
     setGameState: (updater: any) => void,
-    discardCallback: () => void
-): boolean {
+    discardCallback: () => void,
+    onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>,
+): Promise<boolean> {
     // ★ 現在の target の手札を参照
     const targetHand = gameState.hands[targetIndex];
     const sisterIdx = targetHand.findIndex(c => c.no === 7);
@@ -16,6 +17,12 @@ export function trySisterDefense(
     // シスターがない → 防御なし
     if (sisterIdx === -1) return false;
 
+    if (onShowCardMessageOverlay) {
+        await onShowCardMessageOverlay(
+            [7],
+            `${players[targetIndex].name} のシスターが効果を無効化しました。`,
+        );
+    }
     // ★ 使用カードを破棄（共通処理）
     discardCallback();
 

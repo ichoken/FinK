@@ -16,6 +16,7 @@ type MagicianArgs = {
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (n: number) => number) => void;
     setPlayers: (fn: (prev: PlayerInfo[]) => PlayerInfo[]) => void;
+    onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
 // --------------------------------------
@@ -33,6 +34,7 @@ export function resolveMagicianTargetHandler(
         setGameState,
         setPendingAction,
         setActivePlayerIndex,
+        onShowCardMessageOverlay,
     } = args;
 
     if (!pendingAction || pendingAction.kind !== 'magician') return;
@@ -65,7 +67,8 @@ export function resolveMagicianTargetHandler(
         setGameState,
         () => {
             setGameState(prev => discardUsedCard(prev, activePlayerIndex, 3));
-        }
+        },
+        onShowCardMessageOverlay,
     );
 
     if (defended) {

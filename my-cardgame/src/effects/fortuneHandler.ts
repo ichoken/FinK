@@ -13,6 +13,7 @@ type ResolveFortuneArgs = {
     setGameState: (updater: (prev: GameState) => GameState) => void;
     setPendingAction: (p: PendingAction | null) => void;
     setActivePlayerIndex: (fn: (n: number) => number) => void;
+    onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
 export function resolveFortuneTargetHandler({
@@ -24,6 +25,7 @@ export function resolveFortuneTargetHandler({
     setGameState,
     setPendingAction,
     setActivePlayerIndex,
+    onShowCardMessageOverlay,
 }: ResolveFortuneArgs) {
     if (!pendingAction || pendingAction.kind !== 'fortune') return;
 
@@ -44,7 +46,8 @@ export function resolveFortuneTargetHandler({
         setGameState,
         () => {
             setGameState(prev => discardUsedCard(prev, activePlayerIndex, 5));
-        }
+        },
+        onShowCardMessageOverlay,
     );
 
     if (defended) {

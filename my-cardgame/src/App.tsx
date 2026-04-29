@@ -42,6 +42,7 @@ import { finishFortuneHandler } from './effects/fortuneFinishHandler';
 import { handleCpuPendingAction } from './cpu/handleCpuPendingAction';
 import { listHypnotistTargets, resolveHypnotistOnTarget } from './effects/hypnotistHandler';
 import type { CardActivationPreview } from './components/CardActivationOverlay';
+import { CardMessageOverlay, type CardMessagePreview } from './components/CardMessageOverlay';
 
 
 
@@ -83,6 +84,7 @@ export default function App() {
   const [players, setPlayers] = useState<PlayerInfo[]>(() => createDefaultPlayers());
   const [activePlayerIndex, setActivePlayerIndex] = useState(0);
   const [activationPreview, setActivationPreview] = useState<CardActivationPreview | null>(null);
+  const [cardMessagePreview, setCardMessagePreview] = useState<CardMessagePreview | null>(null);
   const [hypnosisStack, setHypnosisStack] = useState<Array<{ returnTo: number }>>([]);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
@@ -168,6 +170,13 @@ export default function App() {
     if (!card) return;
     await showActivation(card, sourceIndex, targetIndex);
   };
+  // ★ カード＋メッセージオーバーレイを 2 秒表示
+  const showCardMessageOverlay = async (cardNos: number[], message: string) => {
+    setCardMessagePreview({ cardNos, message });
+    await sleep(2000);
+    setCardMessagePreview(null);
+  };
+
 
   const forcePlayFromHand = (playerIndex: number, cardIndex: number, returnTo: number) => {
     // 強制発動中は、一時的に「そのプレイヤーが発動した扱い」で処理を進める
@@ -828,6 +837,7 @@ export default function App() {
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
     },
 
@@ -851,6 +861,7 @@ export default function App() {
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
     },
 
@@ -871,6 +882,7 @@ export default function App() {
         onForcePlayFromHand: (forcedPlayerIndex, cardIndex) => {
           forcePlayFromHand(forcedPlayerIndex, cardIndex, returnTo);
         },
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
 
       setPendingAction(null);
@@ -889,6 +901,7 @@ export default function App() {
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
         setPlayers,
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
     },
 
@@ -987,28 +1000,31 @@ export default function App() {
 
   if (screen === 'game') {
     return (
-      <GameScreen
-        players={players}
-        gameState={gameState}
-        activePlayerIndex={activePlayerIndex}
-        selectedIndex={selectedIndex}
-        pendingAction={pendingAction}
-        activationPreview={activationPreview}
-        handleSelect={handleSelect}
-        drawOne={drawOne}
-        debugDrawSpecific={debugDrawSpecific}
-        debugEliminateActivePlayer={debugEliminateActivePlayer}
-        confirmUseSelected={confirmUseSelected}
-        setSelectedIndex={setSelectedIndex}
-        setActivePlayerIndex={setActivePlayerIndex}
-        setScreen={setScreen}
-        startGame={startGame}
-        setGameState={setGameState}
-        setPendingAction={setPendingAction}
-        setPlayers={setPlayers}
-        cards={cards}
-        actions={actions}
-      />
+      <>
+        <GameScreen
+          players={players}
+          gameState={gameState}
+          activePlayerIndex={activePlayerIndex}
+          selectedIndex={selectedIndex}
+          pendingAction={pendingAction}
+          activationPreview={activationPreview}
+          handleSelect={handleSelect}
+          drawOne={drawOne}
+          debugDrawSpecific={debugDrawSpecific}
+          debugEliminateActivePlayer={debugEliminateActivePlayer}
+          confirmUseSelected={confirmUseSelected}
+          setSelectedIndex={setSelectedIndex}
+          setActivePlayerIndex={setActivePlayerIndex}
+          setScreen={setScreen}
+          startGame={startGame}
+          setGameState={setGameState}
+          setPendingAction={setPendingAction}
+          setPlayers={setPlayers}
+          cards={cards}
+          actions={actions}
+        />
+        <CardMessageOverlay preview={cardMessagePreview} cards={cards} />
+      </>
     );
   }
 

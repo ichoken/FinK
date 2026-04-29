@@ -19,6 +19,7 @@ type ResolveHypnotistOnTargetArgs = {
   gameState: GameState;
   setGameState: (fn: (prev: GameState) => GameState) => void;
   onForcePlayFromHand: (targetPlayerIndex: number, cardIndex: number) => void;
+  onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
 export function resolveHypnotistOnTarget({
@@ -28,6 +29,7 @@ export function resolveHypnotistOnTarget({
   gameState,
   setGameState,
   onForcePlayFromHand,
+  onShowCardMessageOverlay,
 }: ResolveHypnotistOnTargetArgs): { didForce: boolean } {
   setGameState((prev) => ({
     ...prev,
@@ -45,7 +47,8 @@ export function resolveHypnotistOnTarget({
     setGameState,
     () => {
       setGameState((prev) => discardUsedCard(prev, sourcePlayerIndex, 9));
-    }
+    },
+    onShowCardMessageOverlay,
   );
 
   if (defended) {
