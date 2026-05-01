@@ -635,53 +635,23 @@ export default function App() {
         return nextState;
       }
 
-      // --- 3) 脱落判定 ---
-      const elim = checkElimination(activePlayerIndex, nextState);
-      if (elim.eliminated) {
+      const result = checkHandChangeCombined(nextState, players);
+
+      result.eliminated.forEach(idx => {
         eliminatePlayerAndUpdate({
-          playerIndex: activePlayerIndex,
+          playerIndex: idx,
           players,
           setPlayers,
           setGameState,
         });
+      });
 
-        return nextState; // ★ ログは eliminatePlayerAndUpdate が出すのでここでは追加しない
-      }
-
-
-      // --- 4) 勝利判定（シスター4枚） ---
-      const v1 = checkVictoryOnHandChange(activePlayerIndex, nextState);
-
-      if (v1.win) {
+      if (result.win) {
         handleGameOver({
-          winners: v1.winners,
+          winners: result.winners,
           players,
           setGameState,
         });
-
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `勝利条件達成: シスター4枚`],
-        };
-
-        return nextState;
-      }
-
-      // --- 5) 勝利判定（山札0枚 + FinK） ---
-      const v2 = checkVictoryOnDeckEmpty(nextState, players);
-      if (v2.win) {
-        handleGameOver({
-          winners: v2.winners,
-          players,
-          setGameState,
-        });
-
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `勝利条件達成: 山札0枚 + FinK`],
-        };
-
-        return nextState;
       }
 
       return nextState;
@@ -726,52 +696,23 @@ export default function App() {
         return nextState;
       }
 
-      // --- 2) 脱落判定 ---
-      const elim = checkElimination(activePlayerIndex, nextState);
-      if (elim.eliminated) {
+      const result = checkHandChangeCombined(nextState, players);
+
+      result.eliminated.forEach(idx => {
         eliminatePlayerAndUpdate({
-          playerIndex: activePlayerIndex,
+          playerIndex: idx,
           players,
           setPlayers,
           setGameState,
         });
+      });
 
-        return nextState;
-      }
-
-      // --- 3) 勝利判定（シスター4枚） ---
-      const v1 = checkVictoryOnHandChange(activePlayerIndex, nextState);
-
-      if (v1.win) {
+      if (result.win) {
         handleGameOver({
-          winners: v1.winners,
+          winners: result.winners,
           players,
           setGameState,
         });
-
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `勝利条件達成: シスター4枚`],
-        };
-
-        return nextState;
-      }
-
-      // --- 4) 勝利判定（山札0枚） ---
-      const v2 = checkVictoryOnDeckEmpty(nextState, players);
-      if (v2.win) {
-        handleGameOver({
-          winners: v2.winners,
-          players,
-          setGameState,
-        });
-
-        nextState = {
-          ...nextState,
-          log: [...nextState.log, `勝利条件達成: 山札0枚 + FinK`],
-        };
-
-        return nextState;
       }
 
       return nextState;
