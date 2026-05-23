@@ -1,10 +1,10 @@
 // src/effects/seizureHandler.ts
 import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
-import { discardUsedCard } from '../utils/discardUsedCard';
 import { checkHandChangeCombined } from '../utils/checkHandChangeCombined';
 import { eliminatePlayerAndUpdate } from '../eliminationHandlers';
 import { handleGameOver } from '../victoryHandlers';
+import { advanceToNextPlayer } from '../utils/advanceTurn';
 
 type Args = {
     pendingAction: PendingAction | null;
@@ -23,7 +23,6 @@ export function resolveSeizureHandler(args: Args) {
         pendingAction,
         activePlayerIndex,
         players,
-        gameState,
         setGameState,
         setPendingAction,
         setActivePlayerIndex,
@@ -32,18 +31,18 @@ export function resolveSeizureHandler(args: Args) {
     } = args;
 
     if (!pendingAction || pendingAction.kind !== 'seizure') return;
+    if (pendingAction.target === undefined) return;
 
-    const target = pendingAction.target!;
-    const giveCard = gameState.hands[activePlayerIndex][cardIndex];
+    const target = pendingAction.target;
 
-    // カードを渡す
     setGameState(prev => {
+        const giveCard = prev.hands[activePlayerIndex]?.[cardIndex];
+        if (!giveCard) {
+            return prev;
+        }
+
         const hands = prev.hands.map(h => [...h]);
-
-        // 自分の手札から取り除く
         hands[activePlayerIndex].splice(cardIndex, 1);
-
-        // 相手に渡す
         hands[target].push(giveCard);
 
         let next: GameState = {
@@ -55,7 +54,6 @@ export function resolveSeizureHandler(args: Args) {
             ],
         };
 
-        // 勝利/脱落判定
         const result = checkHandChangeCombined(next, players);
 
         result.eliminated.forEach(idx => {
@@ -79,5 +77,5 @@ export function resolveSeizureHandler(args: Args) {
     });
 
     setPendingAction(null);
-    setActivePlayerIndex(prev => (prev + 1) % players.length);
+    setActivePlayerIndex(prev => advanceToNextPlayer(prev, players));
 }

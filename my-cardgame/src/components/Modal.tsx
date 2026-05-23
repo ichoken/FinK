@@ -5,20 +5,29 @@ interface ModalProps {
     children: React.ReactNode;
     onClose?: () => void;
     width?: string;
+    zIndex?: number;
 }
 
-export function Modal({ title, children, onClose, width = 'min(600px, 90%)' }: ModalProps) {
+export function Modal({
+    title,
+    children,
+    onClose,
+    width = 'min(600px, 90%)',
+    zIndex = 100000,
+}: ModalProps) {
     return (
         <div
             style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(0,0,0,0.7)',
+                background: 'rgba(0,0,0,0.75)',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                zIndex: 200,
+                zIndex,
             }}
+            onClick={onClose}
+            role="presentation"
         >
             <div
                 style={{
@@ -29,6 +38,7 @@ export function Modal({ title, children, onClose, width = 'min(600px, 90%)' }: M
                     color: '#fff',
                     textShadow: '0 3px 10px rgba(0,0,0,0.8)',
                 }}
+                onClick={(e) => e.stopPropagation()}
             >
                 {title && <h3 style={{ marginTop: 0 }}>{title}</h3>}
 

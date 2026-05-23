@@ -1,12 +1,11 @@
 // src/effects/angelHandler.ts
 import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
-
 import { discardUsedCard } from '../utils/discardUsedCard';
 import { applyForcedEffect } from '../utils/forcedEffect';
 import { checkHandChangeCombined } from '../utils/checkHandChangeCombined';
-import { eliminatePlayerAndUpdate } from '../eliminationHandlers';
-import { handleGameOver } from '../victoryHandlers';
+import { eliminatePlayerPure } from '../eliminationHandlers';
+import { advanceToNextPlayer } from '../utils/advanceTurn';
 
 type ResolveAngelArgs = {
     discardIndex: number;
@@ -20,6 +19,34 @@ type ResolveAngelArgs = {
     setPlayers: (fn: (prev: PlayerInfo[]) => PlayerInfo[]) => void;
 };
 
+function applyHandChecks(
+    state: GameState,
+    players: PlayerInfo[],
+    setPlayers: ResolveAngelArgs['setPlayers'],
+): GameState {
+    let updated = state;
+    const result = checkHandChangeCombined(updated, players);
+
+    result.eliminated.forEach((idx) => {
+        updated = eliminatePlayerPure(idx, updated, players);
+        setPlayers((prev) =>
+            prev.map((p, i) => (i === idx ? { ...p, isEliminated: true } : p)),
+        );
+    });
+
+    if (result.win) {
+        const winnerNames = result.winners.map((i) => players[i].name).join('、');
+        updated = {
+            ...updated,
+            gameOver: true,
+            winners: result.winners,
+            log: [...updated.log, `ゲーム終了！勝者: ${winnerNames}`],
+        };
+    }
+
+    return updated;
+}
+
 export function resolveAngelHandler({
     discardIndex,
     pendingAction,
@@ -32,96 +59,50 @@ export function resolveAngelHandler({
     setPlayers,
 }: ResolveAngelArgs) {
     if (!pendingAction || pendingAction.kind !== 'angel') return;
+    if (discardIndex < 0 || discardIndex >= gameState.discard.length) return;
 
-    // --------------------------------------
-    // Step1: 使用カード（天使 No.8）を墓地へ送る
-    // --------------------------------------
-    setGameState(prev => discardUsedCard(prev, activePlayerIndex, 8));
+    let next = discardUsedCard(gameState, activePlayerIndex, 8);
 
-    // --------------------------------------
-    // Step2: 墓地からカードを取り出す
-    // --------------------------------------
-    const chosenCard = gameState.discard[discardIndex];
-
-    // --------------------------------------
-    // Step3: 強制発動 ON → 即発動
-    // --------------------------------------
-    if (chosenCard.type === 'force') {
-        setGameState(prev => applyForcedEffect(prev, activePlayerIndex, players, setGameState, setPendingAction));
-
-        // 強制発動後の勝利/脱落判定
-        setGameState(prev => {
-            const result = checkHandChangeCombined(prev, players);
-
-            result.eliminated.forEach(idx => {
-                eliminatePlayerAndUpdate({
-                    playerIndex: idx,
-                    players,
-                    setPlayers,
-                    setGameState,
-                });
-            });
-
-            if (result.win) {
-                handleGameOver({
-                    winners: result.winners,
-                    players,
-                    setGameState,
-                });
-            }
-
-            return prev;
-        });
-
+    const discard = [...next.discard];
+    if (discardIndex >= discard.length) {
         setPendingAction(null);
-        setActivePlayerIndex(prev => (prev + 1) % players.length);
+        setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
         return;
     }
 
-    // --------------------------------------
-    // Step4: 強制発動 OFF → 手札に加える
-    // --------------------------------------
-    setGameState(prev => {
-        const discard = [...prev.discard];
-        discard.splice(discardIndex, 1);
+    const [picked] = discard.splice(discardIndex, 1);
+    next = { ...next, discard };
 
-        const hands = prev.hands.map(h => [...h]);
-        hands[activePlayerIndex].push(chosenCard);
+    let forcePending: PendingAction | null = null;
 
-        const updated: GameState = {
-            ...prev,
-            discard,
+    if (picked.type === 'force') {
+        const hands = next.hands.map((h) => [...h]);
+        hands[activePlayerIndex] = [...hands[activePlayerIndex], picked];
+        const withCard = { ...next, hands };
+        const forced = applyForcedEffect(withCard, activePlayerIndex, players);
+        next = applyHandChecks(forced.state, players, setPlayers);
+        forcePending = forced.pending;
+    } else {
+        const hands = next.hands.map((h) => [...h]);
+        hands[activePlayerIndex].push(picked);
+        next = {
+            ...next,
             hands,
+            log: [
+                ...next.log,
+                `${players[activePlayerIndex].name} は墓地から ${picked.name} を手札に加えました。`,
+            ],
         };
+        next = applyHandChecks(next, players, setPlayers);
+    }
 
-        // --------------------------------------
-        // Step5: 勝利/脱落判定（マジシャンと同じ）
-        // --------------------------------------
-        const result = checkHandChangeCombined(updated, players);
+    setGameState(next);
 
-        result.eliminated.forEach(idx => {
-            eliminatePlayerAndUpdate({
-                playerIndex: idx,
-                players,
-                setPlayers,
-                setGameState,
-            });
-        });
+    if (forcePending) {
+        setPendingAction(forcePending);
+        return;
+    }
 
-        if (result.win) {
-            handleGameOver({
-                winners: result.winners,
-                players,
-                setGameState,
-            });
-        }
-
-        return updated;
-    });
-
-    // --------------------------------------
-    // Step6: ターン終了
-    // --------------------------------------
     setPendingAction(null);
-    setActivePlayerIndex(prev => (prev + 1) % players.length);
+    setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
 }

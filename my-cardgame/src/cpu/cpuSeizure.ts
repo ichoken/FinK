@@ -1,10 +1,10 @@
 import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
 import { resolveSeizureHandler } from '../effects/seizureHandler';
+import { advanceToNextPlayer } from '../utils/advanceTurn';
 
 type Args = {
   pendingAction: PendingAction;
-  activePlayerIndex: number;
   players: PlayerInfo[];
   gameState: GameState;
   setGameState: (fn: (prev: GameState) => GameState) => void;
@@ -15,7 +15,6 @@ type Args = {
 
 export function cpuResolveSeizure({
   pendingAction,
-  activePlayerIndex,
   players,
   gameState,
   setGameState,
@@ -25,50 +24,50 @@ export function cpuResolveSeizure({
 }: Args) {
   if (!pendingAction || pendingAction.kind !== 'seizure') return;
 
-  if (pendingAction.step === 'chooseTarget') {
-    const candidates = players
-      .map((_, idx) => idx)
-      .filter(
-        (idx) =>
-          idx !== pendingAction.player &&
-          !players[idx].isEliminated &&
-          gameState.hands[idx].length < 4,
-      );
+  const player = pendingAction.player;
 
-    if (candidates.length === 0) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
+  const finishWithoutTarget = () => {
+    setPendingAction(null);
+    setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
+  };
 
-    const target = candidates[Math.floor(Math.random() * candidates.length)];
-    setPendingAction({
-      kind: 'seizure',
-      player: pendingAction.player,
-      step: 'chooseCard',
-      target,
-    });
+  const candidates = players
+    .map((_, idx) => idx)
+    .filter(
+      (idx) =>
+        idx !== player &&
+        !players[idx].isEliminated &&
+        (gameState.hands[idx]?.length ?? 0) < 4,
+    );
+
+  if (candidates.length === 0) {
+    finishWithoutTarget();
     return;
   }
 
-  if (pendingAction.step === 'chooseCard') {
-    const hand = gameState.hands[activePlayerIndex];
-    if (hand.length === 0) {
-      setPendingAction(null);
-      setActivePlayerIndex((prev) => (prev + 1) % players.length);
-      return;
-    }
-    const cardIndex = Math.floor(Math.random() * hand.length);
-    resolveSeizureHandler({
-      pendingAction,
-      activePlayerIndex,
-      players,
-      gameState,
-      setGameState,
-      setPendingAction,
-      setActivePlayerIndex,
-      setPlayers,
-      cardIndex,
-    });
+  const hand = gameState.hands[player] ?? [];
+  if (hand.length === 0) {
+    finishWithoutTarget();
+    return;
   }
+
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  const cardIndex = Math.floor(Math.random() * hand.length);
+
+  resolveSeizureHandler({
+    pendingAction: {
+      kind: 'seizure',
+      player,
+      step: 'chooseCard',
+      target,
+    },
+    activePlayerIndex: player,
+    players,
+    gameState,
+    setGameState,
+    setPendingAction,
+    setActivePlayerIndex,
+    setPlayers,
+    cardIndex,
+  });
 }

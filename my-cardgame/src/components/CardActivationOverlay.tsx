@@ -6,6 +6,8 @@ export type CardActivationPreview = {
   sourceIndex: number;
   targetIndex?: number;
   card: CardDefinition;
+  /** 省略時はカード発動 */
+  kind?: 'activate' | 'draw';
 };
 
 type Props = {
@@ -63,7 +65,9 @@ export function CardActivationOverlay({ preview, players }: Props) {
           />
 
           <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>カード発動</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>
+              {preview.kind === 'draw' ? 'ドロー' : 'カード発動'}
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>
               {preview.card.name}
             </div>

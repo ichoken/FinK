@@ -3,6 +3,7 @@ import type { GameState, PendingAction } from "../types";
 import type { PlayerInfo } from "../gameConfig";
 import { resolveThiefTargetHandler } from "../effects/thiefHandler";
 import { findAttackTargets } from "../utils/checkTargets";
+import { advanceToNextPlayer } from "../utils/advanceTurn";
 
 export type CpuThiefArgs = {
     pendingAction: PendingAction;
@@ -14,6 +15,7 @@ export type CpuThiefArgs = {
     setActivePlayerIndex: (fn: (prev: number) => number) => void;
     setPlayers: (fn: (prev: PlayerInfo[]) => PlayerInfo[]) => void;
     onShowActivation?: (cardNo: number, sourceIndex: number, targetIndex?: number) => Promise<void>;
+    onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
 export async function cpuResolveThief({
@@ -26,30 +28,25 @@ export async function cpuResolveThief({
     setActivePlayerIndex,
     setPlayers,
     onShowActivation,
+    onShowCardMessageOverlay,
 }: CpuThiefArgs) {
-
-    // ★ 型ガード
     if (!pendingAction || pendingAction.kind !== "thief") return;
 
-    // ★ CPU が対象候補を取得（useThief と同じロジック）
     const targets = findAttackTargets(activePlayerIndex, gameState, players);
 
     if (targets.length === 0) {
-        // 対象がいない → noTargetWarning と同じ扱い
         setPendingAction(null);
-        setActivePlayerIndex(prev => (prev + 1) % players.length);
+        setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
         return;
     }
 
-    // ★ CPU はランダムに対象を選ぶ
     const target = targets[Math.floor(Math.random() * targets.length)];
 
     if (onShowActivation) {
         await onShowActivation(4, activePlayerIndex, target);
     }
 
-    // ★ resolveThiefTargetHandler を呼ぶ
-    resolveThiefTargetHandler({
+    await resolveThiefTargetHandler({
         targetIndex: target,
         pendingAction,
         activePlayerIndex,
@@ -58,5 +55,7 @@ export async function cpuResolveThief({
         setGameState,
         setPendingAction,
         setActivePlayerIndex,
+        setPlayers,
+        onShowCardMessageOverlay,
     });
 }

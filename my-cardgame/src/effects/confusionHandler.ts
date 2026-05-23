@@ -1,6 +1,7 @@
 // src/effects/confusionHandler.ts
 import type { GameState, PendingAction } from '../types';
 import type { PlayerInfo } from '../gameConfig';
+import { advanceToNextPlayer } from '../utils/advanceTurn';
 
 type ResolveConfusionArgs = {
     pendingAction: PendingAction | null;
@@ -13,17 +14,12 @@ type ResolveConfusionArgs = {
 
 export function resolveConfusionHandler({
     pendingAction,
-    activePlayerIndex,
     players,
-    gameState,
     setPendingAction,
     setActivePlayerIndex,
 }: ResolveConfusionArgs) {
     if (!pendingAction || pendingAction.kind !== 'confusion') return;
 
-    // CPU の混乱 UI を閉じるだけ
     setPendingAction(null);
-
-    // ターン終了
-    setActivePlayerIndex(prev => (prev + 1) % players.length);
+    setActivePlayerIndex(prev => advanceToNextPlayer(prev, players));
 }

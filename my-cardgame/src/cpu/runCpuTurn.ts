@@ -5,7 +5,7 @@ type Args = {
   activePlayerIndex: number;
   gameState: GameState;
   players: PlayerInfo[];
-  onDraw: () => void;
+  onDraw: () => void | Promise<void>;
   onPlayCard: (index: number) => Promise<void>;
   sleep: (ms: number) => Promise<void>;
 };
@@ -50,7 +50,7 @@ export async function runCpuTurn({
   }
 
   if (Math.random() < 0.5 || playable.length === 0) {
-    onDraw();
+    await onDraw();
     return;
   }
 

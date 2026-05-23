@@ -22,7 +22,7 @@ type ResolveHypnotistOnTargetArgs = {
   onShowCardMessageOverlay?: (cardNos: number[], message: string) => Promise<void>;
 };
 
-export function resolveHypnotistOnTarget({
+export async function resolveHypnotistOnTarget({
   sourcePlayerIndex,
   targetIndex,
   players,
@@ -30,7 +30,7 @@ export function resolveHypnotistOnTarget({
   setGameState,
   onForcePlayFromHand,
   onShowCardMessageOverlay,
-}: ResolveHypnotistOnTargetArgs): { didForce: boolean } {
+}: ResolveHypnotistOnTargetArgs): Promise<{ didForce: boolean }> {
   setGameState((prev) => ({
     ...prev,
     log: [
@@ -39,8 +39,7 @@ export function resolveHypnotistOnTarget({
     ],
   }));
 
-  // シスター防御
-  const defended = trySisterDefense(
+  const defended = await trySisterDefense(
     targetIndex,
     gameState,
     players,
@@ -55,8 +54,10 @@ export function resolveHypnotistOnTarget({
     return { didForce: false };
   }
 
-  const targetHand = gameState.hands[targetIndex];
-  if (targetHand.length === 0) return { didForce: false };
+  const targetHand = gameState.hands[targetIndex] ?? [];
+  if (targetHand.length === 0) {
+    return { didForce: false };
+  }
 
   const forcedCardIndex = Math.floor(Math.random() * targetHand.length);
   const forcedCard = targetHand[forcedCardIndex];
@@ -72,4 +73,3 @@ export function resolveHypnotistOnTarget({
   onForcePlayFromHand(targetIndex, forcedCardIndex);
   return { didForce: true };
 }
-

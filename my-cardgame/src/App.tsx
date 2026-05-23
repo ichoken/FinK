@@ -6,15 +6,15 @@ import { useProphet } from './effects/prophet';
 import type { GameMode, GameState, PendingAction, Screen } from './types';
 import { advanceToNextPlayer } from './utils/advanceTurn';
 import { runCpuTurn } from './cpu/runCpuTurn';
-import { eliminatePlayerAndUpdate } from './eliminationHandlers';
+import { eliminatePlayerAndUpdate, eliminatePlayerPure } from './eliminationHandlers';
 import { checkElimination } from './eliminationCheck';
 import { handleGameOver } from './victoryHandlers';
 import { applyForcedEffect } from './utils/forcedEffect';
 import {
   checkVictoryOnHandChange,
   checkVictoryOnElimination,
-  checkVictoryOnDeckEmpty,
 } from './victoryCheck';
+import { applyDeckEmptyVictory } from './utils/deckVictory';
 import { GameScreen } from './GameScreen';
 import { TitleScreen } from './TitleScreen';
 import { useFortuneTeller } from './effects/fortuneTeller';
@@ -130,24 +130,26 @@ export default function App() {
 
   useEffect(() => {
     if (!pendingAction) return;
+    if (!('player' in pendingAction)) return;
 
     const actingPlayer = pendingAction.player;
-    if (players[actingPlayer].kind !== 'cpu') return;
+    if (playersRef.current[actingPlayer]?.kind !== 'cpu') return;
 
-    // CPU が pendingAction を処理する（演出待ちを挟めるように async で呼ぶ）
-    (async () => {
-      await handleCpuPendingAction({
+    // gameState コミット後に実行（setState 内で setPending した直後の stale 回避）
+    queueMicrotask(() => {
+      handleCpuPendingAction({
         pendingAction,
         activePlayerIndex: actingPlayer,
-        players,
-        gameState,
+        players: playersRef.current,
+        gameState: gameStateRef.current,
         setGameState,
         setPendingAction,
-        setActivePlayerIndex: setActivePlayerIndexControlled,
+        setActivePlayerIndex,
         setPlayers,
         onShowActivation: showActivationByNo,
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
-    })();
+    });
   }, [pendingAction]);
 
   // 催眠術師などの「強制発動」連鎖が終わったら、最初の発動者の次へ手番を戻す
@@ -171,10 +173,19 @@ export default function App() {
 
   const getCardByNo = (no: number) => cards.find((c) => c.no === no);
 
-  const showActivation = async (card: CardDefinition, sourceIndex: number, targetIndex?: number) => {
-    setActivationPreview({ card, sourceIndex, targetIndex });
-    await sleep(2000);
+  const showActivation = async (
+    card: CardDefinition,
+    sourceIndex: number,
+    targetIndex?: number,
+    kind: 'activate' | 'draw' = 'activate',
+  ) => {
+    setActivationPreview({ card, sourceIndex, targetIndex, kind });
+    await sleep(kind === 'draw' ? 1500 : 2000);
     setActivationPreview(null);
+  };
+
+  const showDrawOverlay = async (card: CardDefinition, playerIndex: number) => {
+    await showActivation(card, playerIndex, undefined, 'draw');
   };
 
   const showActivationByNo = async (cardNo: number, sourceIndex: number, targetIndex?: number) => {
@@ -197,7 +208,14 @@ export default function App() {
     setSelectedIndex(null);
 
     const currentPlayers = playersRef.current;
-    const snapshot = gameStateRef.current.hands[playerIndex]?.[cardIndex];
+    const hand = gameStateRef.current.hands[playerIndex] ?? [];
+    const safeIndex =
+      cardIndex >= 0 && cardIndex < hand.length
+        ? cardIndex
+        : hand.length > 0
+          ? Math.floor(Math.random() * hand.length)
+          : -1;
+    const snapshot = safeIndex >= 0 ? hand[safeIndex] : undefined;
     if (!snapshot) return;
 
     // FinK / 黒魔術師は副作用ハンドラなので先に分岐（ログを上書きしない）
@@ -280,7 +298,7 @@ export default function App() {
 
     // 「直前の state(prev)」に対して効果を適用し、催眠術師ログが消えないようにする
     setGameState((prev) => {
-      const card = prev.hands[playerIndex]?.[cardIndex];
+      const card = prev.hands[playerIndex]?.[safeIndex];
       if (!card) return prev;
 
       if (card.no === 1) {
@@ -291,7 +309,7 @@ export default function App() {
       }
 
       if (card.no === 2) {
-        const res = useMerchant(prev, playerIndex, cardIndex, currentPlayers);
+        const res = useMerchant(prev, playerIndex, safeIndex, currentPlayers);
         setPendingAction(res.pending);
         if (res.endTurn) setPendingAction(null);
         return res.nextState;
@@ -326,8 +344,9 @@ export default function App() {
       }
 
       if (card.type === 'force') {
-        // drawOne と同様の強制効果処理に委譲（pendingAction が出る場合あり）
-        return applyForcedEffect(prev, playerIndex, currentPlayers, setGameState, setPendingAction);
+        const { state, pending } = applyForcedEffect(prev, playerIndex, currentPlayers);
+        if (pending) setPendingAction(pending);
+        return state;
       }
 
       // 未対応カードは通常の「使用（墓地へ）」扱いだけ行う
@@ -343,24 +362,12 @@ export default function App() {
     });
   };
 
-  const endTurnAfterDrawIfGameMode = (drawn: CardDefinition, playerIndex: number) => {
+  const advanceTurnAfterDraw = () => {
     if (gameModeRef.current !== 'game') return;
-
-    const waitsPending =
-      drawn.type === 'force' &&
-      (drawn.no === 10 ||
-        (drawn.no === 11 && playersRef.current[playerIndex].kind === 'cpu'));
-
-    if (waitsPending) return;
-
-    queueMicrotask(() => {
-      if (gameStateRef.current.gameOver) return;
-      if (hypnosisStackRef.current.length > 0) return;
-      setActivePlayerIndexControlled((prev) =>
-        advanceToNextPlayer(prev, playersRef.current),
-      );
-      setSelectedIndex(null);
-    });
+    if (gameStateRef.current.gameOver) return;
+    if (hypnosisStackRef.current.length > 0) return;
+    setActivePlayerIndex((prev) => advanceToNextPlayer(prev, playersRef.current));
+    setSelectedIndex(null);
   };
 
   const startGame = (mode: GameMode = 'debug') => {
@@ -385,6 +392,9 @@ export default function App() {
       };
     });
     setPlayers(() => createDefaultPlayers());
+    setPendingAction(null);
+    setHypnosisStack([]);
+    cpuTurnRunningRef.current = false;
     setScreen('game');
     setActivePlayerIndex(0);
     setSelectedIndex(null);
@@ -558,16 +568,26 @@ export default function App() {
       const returnTo = advanceToNextPlayer(playerIndex, players);
       setSelectedIndex(null);
 
-      // 使用した催眠術師は必ず墓地へ
-      setGameState((prev) => discardUsedCard(prev, playerIndex, 9));
+      const stateAfterDiscard = discardUsedCard(
+        gameStateRef.current,
+        playerIndex,
+        9,
+      );
+      setGameState(stateAfterDiscard);
 
-      // player 発動時：対象は選択式
       if (players[playerIndex].kind === 'human') {
-        const targets = listHypnotistTargets(playerIndex, gameState, players);
+        const targets = listHypnotistTargets(
+          playerIndex,
+          stateAfterDiscard,
+          players,
+        );
         if (targets.length === 0) {
           setGameState((prev) => ({
             ...prev,
-            log: [...prev.log, `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+            log: [
+              ...prev.log,
+              `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`,
+            ],
           }));
           setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
           return;
@@ -583,30 +603,39 @@ export default function App() {
         return;
       }
 
-      // CPU 発動時：対象はランダム
-      const targets = listHypnotistTargets(playerIndex, gameState, players);
+      const targets = listHypnotistTargets(
+        playerIndex,
+        stateAfterDiscard,
+        players,
+      );
       if (targets.length === 0) {
         setGameState((prev) => ({
           ...prev,
-          log: [...prev.log, `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+          log: [
+            ...prev.log,
+            `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`,
+          ],
         }));
         setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
         return;
       }
 
       const targetIndex = targets[Math.floor(Math.random() * targets.length)];
-      const { didForce } = resolveHypnotistOnTarget({
+      const { didForce } = await resolveHypnotistOnTarget({
         sourcePlayerIndex: playerIndex,
         targetIndex,
         players,
-        gameState,
+        gameState: stateAfterDiscard,
         setGameState,
-        onForcePlayFromHand: (targetPlayerIndex, cardIndex) => {
-          forcePlayFromHand(targetPlayerIndex, cardIndex, returnTo);
+        onForcePlayFromHand: (targetPlayerIndex, forcedCardIndex) => {
+          forcePlayFromHand(targetPlayerIndex, forcedCardIndex, returnTo);
         },
+        onShowCardMessageOverlay: showCardMessageOverlay,
       });
 
-      if (!didForce) setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
+      if (!didForce) {
+        setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
+      }
       return;
     }
     if (card.no === 6) {
@@ -638,70 +667,76 @@ export default function App() {
     playFromHand(playerIndex, index);
   };
 
-  const drawOne = () => {
+  const drawOne = async () => {
     const actingPlayer = activePlayerIndex;
-    let drawnCard: CardDefinition | null = null;
+    const prev = gameStateRef.current;
+    const currentPlayers = playersRef.current;
 
-    setGameState((prev) => {
-      // --- 1) 山札チェック ---
-      if (prev.deck.length === 0) return prev;
-
-      // --- 2) ドロー処理 ---
-      const nextDeck = [...prev.deck];
-      const [drawn] = nextDeck.splice(0, 1);
-      drawnCard = drawn;
-
-      const nextHands = prev.hands.map((h) => [...h]);
-      nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], drawn];
-
-      let nextState: GameState = {
-        ...prev,
-        deck: nextDeck,
-        hands: nextHands,
-        log: [
-          ...prev.log,
-          `${players[activePlayerIndex].name} がカードを1枚引きました。`,
-        ],
-      };
-
-      if (drawn.type === 'force') {
-        nextState = applyForcedEffect(
-          nextState,
-          activePlayerIndex,
-          players,
-          setGameState,
-          setPendingAction
-        );
-
-        // 混乱は手札公開だけなので、ここで return して OK
-        return nextState;
+    if (prev.deck.length === 0) {
+      const emptyDeckState = applyDeckEmptyVictory(prev, currentPlayers);
+      if (emptyDeckState.gameOver) {
+        setGameState(emptyDeckState);
       }
+      return;
+    }
 
-      const result = checkHandChangeCombined(nextState, players);
+    const nextDeck = [...prev.deck];
+    const [drawn] = nextDeck.splice(0, 1);
+    const nextHands = prev.hands.map((h) => [...h]);
+    nextHands[actingPlayer] = [...nextHands[actingPlayer], drawn];
 
-      result.eliminated.forEach(idx => {
-        eliminatePlayerAndUpdate({
-          playerIndex: idx,
-          players,
-          setPlayers,
-          setGameState,
-        });
-      });
+    let nextState: GameState = {
+      ...prev,
+      deck: nextDeck,
+      hands: nextHands,
+      log: [
+        ...prev.log,
+        `${currentPlayers[actingPlayer].name} がカードを1枚引きました。`,
+      ],
+    };
 
-      if (result.win) {
-        handleGameOver({
-          winners: result.winners,
-          players,
-          setGameState,
-        });
-      }
+    let forcePending: PendingAction | null = null;
 
-      return nextState;
+    if (drawn.type === 'force') {
+      const forced = applyForcedEffect(nextState, actingPlayer, currentPlayers);
+      nextState = forced.state;
+      forcePending = forced.pending;
+    }
+
+    let finalState = nextState;
+    const handResult = checkHandChangeCombined(finalState, currentPlayers);
+
+    handResult.eliminated.forEach((idx) => {
+      finalState = eliminatePlayerPure(idx, finalState, currentPlayers);
+      setPlayers((prev) =>
+        prev.map((p, i) => (i === idx ? { ...p, isEliminated: true } : p)),
+      );
     });
 
-    if (drawnCard) {
-      endTurnAfterDrawIfGameMode(drawnCard, actingPlayer);
+    if (handResult.win) {
+      const winnerNames = handResult.winners
+        .map((idx) => currentPlayers[idx].name)
+        .join('、');
+      finalState = {
+        ...finalState,
+        gameOver: true,
+        winners: handResult.winners,
+        log: [...finalState.log, `ゲーム終了！勝者: ${winnerNames}`],
+      };
     }
+
+    finalState = applyDeckEmptyVictory(finalState, currentPlayers);
+
+    setGameState(finalState);
+
+    await showDrawOverlay(drawn, actingPlayer);
+
+    if (forcePending !== null) {
+      setPendingAction(forcePending);
+      return;
+    }
+
+    advanceTurnAfterDraw();
   };
 
   // 正式モード: CPU の手番を自律処理
@@ -767,16 +802,9 @@ export default function App() {
       };
 
       if (picked.type === 'force') {
-        nextState = applyForcedEffect(
-          nextState,
-          activePlayerIndex,
-          players,
-          setGameState,
-          setPendingAction
-        );
-
-        // 混乱は手札公開だけなので、ここで return して OK
-        return nextState;
+        const forced = applyForcedEffect(nextState, activePlayerIndex, players);
+        if (forced.pending) setPendingAction(forced.pending);
+        return forced.state;
       }
 
       const result = checkHandChangeCombined(nextState, players);
@@ -876,15 +904,16 @@ export default function App() {
     resolveThiefTarget: async (targetIndex: number) => {
       const source = pendingAction?.player ?? activePlayerIndex;
       await showActivationByNo(4, source, targetIndex);
-      resolveThiefTargetHandler({
+      await resolveThiefTargetHandler({
         targetIndex,
         pendingAction,
         activePlayerIndex: source,
         players,
-        gameState,
+        gameState: gameStateRef.current,
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,
+        setPlayers,
         onShowCardMessageOverlay: showCardMessageOverlay,
       });
     },
@@ -897,14 +926,14 @@ export default function App() {
 
       await showActivationByNo(9, sourcePlayerIndex, targetIndex);
 
-      const { didForce } = resolveHypnotistOnTarget({
+      const { didForce } = await resolveHypnotistOnTarget({
         sourcePlayerIndex,
         targetIndex,
         players,
-        gameState,
+        gameState: gameStateRef.current,
         setGameState,
-        onForcePlayFromHand: (forcedPlayerIndex, cardIndex) => {
-          forcePlayFromHand(forcedPlayerIndex, cardIndex, returnTo);
+        onForcePlayFromHand: (forcedPlayerIndex, forcedCardIndex) => {
+          forcePlayFromHand(forcedPlayerIndex, forcedCardIndex, returnTo);
         },
         onShowCardMessageOverlay: showCardMessageOverlay,
       });
@@ -981,9 +1010,9 @@ export default function App() {
       resolveAngelHandler({
         discardIndex,
         pendingAction,
-        activePlayerIndex,
+        activePlayerIndex: pendingAction?.player ?? activePlayerIndex,
         players,
-        gameState,
+        gameState: gameStateRef.current,
         setGameState,
         setPendingAction,
         setActivePlayerIndex: setActivePlayerIndexControlled,

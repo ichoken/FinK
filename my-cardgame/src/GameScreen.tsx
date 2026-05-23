@@ -406,7 +406,12 @@ export function GameScreen({
                                     title="シーフ：対象プレイヤーを選択"
                                     players={players
                                         .map((p, i) => ({ ...p, index: i }))
-                                        .filter((p) => p.index !== activePlayerIndex && gameState.hands[p.index].length > 0)
+                                        .filter(
+                                            (p) =>
+                                                p.index !== pendingAction.player &&
+                                                !p.isEliminated &&
+                                                gameState.hands[p.index].length > 0,
+                                        )
                                     }
                                     onSelect={(idx) => actions.resolveThiefTarget(idx)}
                                 />
@@ -460,24 +465,53 @@ export function GameScreen({
                                 </div>
                             )}
 
-                        {pendingAction?.kind === 'angel' && (
-                            <div className="modal">
-                                <h3>天使：墓地からカードを選択</h3>
-
-                                <div className="discard-list">
+                        {pendingAction?.kind === 'angel' &&
+                            players[pendingAction.player]?.kind === 'human' && (
+                            <Modal title="天使：墓地からカードを選択" zIndex={100001}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '1rem',
+                                        justifyContent: 'center',
+                                    }}
+                                >
                                     {gameState.discard.map((card, idx) => (
                                         <button
-                                            key={idx}
+                                            key={`${card.no}-${idx}`}
+                                            type="button"
                                             onClick={() => actions.resolveAngel(idx)}
-                                            className="discard-card-button"
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '0.35rem',
+                                                padding: '0.5rem',
+                                                borderRadius: 8,
+                                                border: '1px solid rgba(255,255,255,0.35)',
+                                                background: 'rgba(0,0,0,0.45)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                            }}
                                         >
-                                            {card.name}
+                                            <img
+                                                src={card.image}
+                                                alt={card.name}
+                                                style={{
+                                                    width: 72,
+                                                    height: 107,
+                                                    objectFit: 'cover',
+                                                    borderRadius: 6,
+                                                }}
+                                            />
+                                            <span style={{ fontSize: '0.85rem' }}>{card.name}</span>
                                         </button>
                                     ))}
                                 </div>
-                            </div>
+                            </Modal>
                         )}
-                        {pendingAction?.kind === 'confusion' && (
+                        {pendingAction?.kind === 'confusion' &&
+                            players[pendingAction.player]?.kind === 'human' && (
                             <div className="modal">
                                 <h3>混乱：{players[pendingAction.player].name} の手札</h3>
 
@@ -492,7 +526,9 @@ export function GameScreen({
                                 <button onClick={actions.resolveConfusion}>OK</button>
                             </div>
                         )}
-                        {pendingAction?.kind === 'seizure' && pendingAction.step === 'chooseTarget' && (
+                        {pendingAction?.kind === 'seizure' &&
+                            pendingAction.step === 'chooseTarget' &&
+                            players[pendingAction.player]?.kind === 'human' && (
                             <Modal>
                                 <h3>差し押さえ：対象プレイヤーを選択</h3>
 
@@ -508,7 +544,9 @@ export function GameScreen({
                                 })}
                             </Modal>
                         )}
-                        {pendingAction?.kind === 'seizure' && pendingAction.step === 'chooseCard' && (
+                        {pendingAction?.kind === 'seizure' &&
+                            pendingAction.step === 'chooseCard' &&
+                            players[pendingAction.player]?.kind === 'human' && (
                             <Modal>
                                 <h3>差し押さえ：渡すカードを選択</h3>
 
