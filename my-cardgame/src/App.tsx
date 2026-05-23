@@ -3,7 +3,9 @@ import { cards, type CardDefinition } from './cards';
 import { createDefaultPlayers, type PlayerInfo, PLAYER_COUNT, HUMAN_PLAYER_INDEX } from './gameConfig';
 import { useMerchant } from './effects/merchant';
 import { useProphet } from './effects/prophet';
-import type { GameState, PendingAction, Screen } from './types';
+import type { GameMode, GameState, PendingAction, Screen } from './types';
+import { advanceToNextPlayer } from './utils/advanceTurn';
+import { runCpuTurn } from './cpu/runCpuTurn';
 import { eliminatePlayerAndUpdate } from './eliminationHandlers';
 import { checkElimination } from './eliminationCheck';
 import { handleGameOver } from './victoryHandlers';
@@ -79,6 +81,7 @@ function drawInitialNonForce(deck: CardDefinition[]): CardDefinition | undefined
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('title');
+  const [gameMode, setGameMode] = useState<GameMode>('debug');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [players, setPlayers] = useState<PlayerInfo[]>(() => createDefaultPlayers());
@@ -86,6 +89,9 @@ export default function App() {
   const [activationPreview, setActivationPreview] = useState<CardActivationPreview | null>(null);
   const [cardMessagePreview, setCardMessagePreview] = useState<CardMessagePreview | null>(null);
   const [hypnosisStack, setHypnosisStack] = useState<Array<{ returnTo: number }>>([]);
+  const hypnosisStackRef = useRef(hypnosisStack);
+  const cpuTurnRunningRef = useRef(false);
+  const gameModeRef = useRef<GameMode>(gameMode);
   const [gameState, setGameState] = useState<GameState>(() => {
     const deck = buildInitialDeck();
     const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
@@ -115,6 +121,12 @@ export default function App() {
   useEffect(() => {
     playersRef.current = players;
   }, [players]);
+  useEffect(() => {
+    hypnosisStackRef.current = hypnosisStack;
+  }, [hypnosisStack]);
+  useEffect(() => {
+    gameModeRef.current = gameMode;
+  }, [gameMode]);
 
   useEffect(() => {
     if (!pendingAction) return;
@@ -331,7 +343,29 @@ export default function App() {
     });
   };
 
-  const startGame = () => {
+  const endTurnAfterDrawIfGameMode = (drawn: CardDefinition, playerIndex: number) => {
+    if (gameModeRef.current !== 'game') return;
+
+    const waitsPending =
+      drawn.type === 'force' &&
+      (drawn.no === 10 ||
+        (drawn.no === 11 && playersRef.current[playerIndex].kind === 'cpu'));
+
+    if (waitsPending) return;
+
+    queueMicrotask(() => {
+      if (gameStateRef.current.gameOver) return;
+      if (hypnosisStackRef.current.length > 0) return;
+      setActivePlayerIndexControlled((prev) =>
+        advanceToNextPlayer(prev, playersRef.current),
+      );
+      setSelectedIndex(null);
+    });
+  };
+
+  const startGame = (mode: GameMode = 'debug') => {
+    setGameMode(mode);
+    gameModeRef.current = mode;
     setGameState(() => {
       const deck = buildInitialDeck();
       const hands: CardDefinition[][] = Array.from({ length: PLAYER_COUNT }, () => []);
@@ -393,7 +427,11 @@ export default function App() {
 
   const confirmUseSelected = async () => {
     if (selectedIndex === null) return;
-    const card = gameState.hands[activePlayerIndex][selectedIndex];
+    await playCardAtIndex(activePlayerIndex, selectedIndex);
+  };
+
+  const playCardAtIndex = async (playerIndex: number, index: number) => {
+    const card = gameState.hands[playerIndex][index];
     if (!card) return;
 
     // プレイヤー発動時：相手（対象プレイヤー）を選ぶカードは「選択前の演出」を出さない。
@@ -405,13 +443,13 @@ export default function App() {
       card.no === 9;   // 催眠術師
 
     if (!needsTargetPlayer) {
-      await showActivation(card, activePlayerIndex);
+      await showActivation(card, playerIndex);
     }
 
     if (card.no === 1) {
       const { nextState, pending, endTurn } = useProphet(
         gameState,
-        activePlayerIndex,
+        playerIndex,
         players
       );
 
@@ -429,8 +467,8 @@ export default function App() {
     if (card.no === 2) {
       const { nextState, pending, endTurn } = useMerchant(
         gameState,
-        activePlayerIndex,
-        selectedIndex,
+        playerIndex,
+        index,
         players
       );
 
@@ -447,7 +485,7 @@ export default function App() {
     if (card.no === 3) {
       const { nextState, pending, endTurn } = useMagician(
         gameState,
-        activePlayerIndex,
+        playerIndex,
         players
       );
 
@@ -465,7 +503,7 @@ export default function App() {
     if (card.no === 4) {
       const { nextState, pending, endTurn } = useThief(
         gameState,
-        activePlayerIndex,
+        playerIndex,
         players
       );
 
@@ -483,7 +521,7 @@ export default function App() {
     if (card.no === 5) {
       const { nextState, pending, endTurn } = useFortuneTeller(
         gameState,
-        activePlayerIndex,
+        playerIndex,
         players
       );
 
@@ -502,7 +540,7 @@ export default function App() {
     if (card.no === 8) {
       const { nextState, pending, endTurn } = useAngel(
         gameState,
-        activePlayerIndex
+        playerIndex
       );
 
       setGameState(nextState);
@@ -517,27 +555,27 @@ export default function App() {
     }
 
     if (card.no === 9) {
-      const returnTo = (activePlayerIndex + 1) % players.length;
+      const returnTo = advanceToNextPlayer(playerIndex, players);
       setSelectedIndex(null);
 
       // 使用した催眠術師は必ず墓地へ
-      setGameState((prev) => discardUsedCard(prev, activePlayerIndex, 9));
+      setGameState((prev) => discardUsedCard(prev, playerIndex, 9));
 
       // player 発動時：対象は選択式
-      if (players[activePlayerIndex].kind === 'human') {
-        const targets = listHypnotistTargets(activePlayerIndex, gameState, players);
+      if (players[playerIndex].kind === 'human') {
+        const targets = listHypnotistTargets(playerIndex, gameState, players);
         if (targets.length === 0) {
           setGameState((prev) => ({
             ...prev,
-            log: [...prev.log, `${players[activePlayerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+            log: [...prev.log, `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
           }));
-          setActivePlayerIndex((prev) => (prev + 1) % players.length);
+          setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
           return;
         }
 
         setPendingAction({
           kind: 'hypnotist',
-          player: activePlayerIndex,
+          player: playerIndex,
           step: 'chooseTarget',
           returnTo,
         });
@@ -546,19 +584,19 @@ export default function App() {
       }
 
       // CPU 発動時：対象はランダム
-      const targets = listHypnotistTargets(activePlayerIndex, gameState, players);
+      const targets = listHypnotistTargets(playerIndex, gameState, players);
       if (targets.length === 0) {
         setGameState((prev) => ({
           ...prev,
-          log: [...prev.log, `${players[activePlayerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
+          log: [...prev.log, `${players[playerIndex].name} は催眠術師を使用しましたが、対象者がいませんでした。`],
         }));
-        setActivePlayerIndex((prev) => (prev + 1) % players.length);
+        setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
         return;
       }
 
       const targetIndex = targets[Math.floor(Math.random() * targets.length)];
       const { didForce } = resolveHypnotistOnTarget({
-        sourcePlayerIndex: activePlayerIndex,
+        sourcePlayerIndex: playerIndex,
         targetIndex,
         players,
         gameState,
@@ -568,12 +606,12 @@ export default function App() {
         },
       });
 
-      if (!didForce) setActivePlayerIndex((prev) => (prev + 1) % players.length);
+      if (!didForce) setActivePlayerIndex((prev) => advanceToNextPlayer(prev, players));
       return;
     }
     if (card.no === 6) {
       resolveBlackMagicianHandler({
-        activePlayerIndex,
+        activePlayerIndex: playerIndex,
         players,
         gameState,
         setGameState,
@@ -585,7 +623,7 @@ export default function App() {
 
     if (card.no === 12) {
       resolveFinKHandler({
-        activePlayerIndex,
+        activePlayerIndex: playerIndex,
         players,
         gameState,
         setGameState,
@@ -597,10 +635,13 @@ export default function App() {
     }
 
     // 他のカードは playFromHand を呼ぶ
-    playFromHand(selectedIndex);
+    playFromHand(playerIndex, index);
   };
 
   const drawOne = () => {
+    const actingPlayer = activePlayerIndex;
+    let drawnCard: CardDefinition | null = null;
+
     setGameState((prev) => {
       // --- 1) 山札チェック ---
       if (prev.deck.length === 0) return prev;
@@ -608,6 +649,7 @@ export default function App() {
       // --- 2) ドロー処理 ---
       const nextDeck = [...prev.deck];
       const [drawn] = nextDeck.splice(0, 1);
+      drawnCard = drawn;
 
       const nextHands = prev.hands.map((h) => [...h]);
       nextHands[activePlayerIndex] = [...nextHands[activePlayerIndex], drawn];
@@ -656,8 +698,49 @@ export default function App() {
 
       return nextState;
     });
+
+    if (drawnCard) {
+      endTurnAfterDrawIfGameMode(drawnCard, actingPlayer);
+    }
   };
 
+  // 正式モード: CPU の手番を自律処理
+  useEffect(() => {
+    if (gameMode !== 'game' || screen !== 'game') return;
+    if (gameState.gameOver) return;
+    if (pendingAction !== null) return;
+    if (hypnosisStack.length > 0) return;
+
+    const player = players[activePlayerIndex];
+    if (player.kind !== 'cpu' || player.isEliminated) return;
+    if (cpuTurnRunningRef.current) return;
+
+    cpuTurnRunningRef.current = true;
+    const turnPlayer = activePlayerIndex;
+
+    (async () => {
+      try {
+        await runCpuTurn({
+          activePlayerIndex: turnPlayer,
+          gameState: gameStateRef.current,
+          players: playersRef.current,
+          onDraw: () => drawOne(),
+          onPlayCard: (idx) => playCardAtIndex(turnPlayer, idx),
+          sleep,
+        });
+      } finally {
+        cpuTurnRunningRef.current = false;
+      }
+    })();
+  }, [
+    gameMode,
+    screen,
+    activePlayerIndex,
+    pendingAction,
+    gameState.gameOver,
+    hypnosisStack.length,
+    players,
+  ]);
 
   const debugDrawSpecific = (cardNo: number) => {
     setGameState((prev) => {
@@ -737,18 +820,18 @@ export default function App() {
   };
 
 
-  const playFromHand = (index: number) => {
+  const playFromHand = (playerIndex: number, index: number) => {
     setGameState((prev) => {
-      const playerHand = prev.hands[activePlayerIndex];
+      const playerHand = prev.hands[playerIndex];
       if (index < 0 || index >= playerHand.length) return prev;
       const nextHands = prev.hands.map((h) => [...h]);
-      const [played] = nextHands[activePlayerIndex].splice(index, 1);
+      const [played] = nextHands[playerIndex].splice(index, 1);
       return {
         ...prev,
         deck: prev.deck,
         hands: nextHands,
         discard: [...prev.discard, played],
-        log: [...prev.log, `${players[activePlayerIndex].name} がカードを使用しました。（${played.name}）`],
+        log: [...prev.log, `${players[playerIndex].name} がカードを使用しました。（${played.name}）`],
       };
     });
     setSelectedIndex(null);
@@ -943,6 +1026,7 @@ export default function App() {
     return (
       <>
         <GameScreen
+          gameMode={gameMode}
           players={players}
           gameState={gameState}
           activePlayerIndex={activePlayerIndex}
@@ -970,7 +1054,7 @@ export default function App() {
   }
 
   if (screen === 'title') {
-    return <TitleScreen startGame={startGame} />;
+    return <TitleScreen startGame={(mode) => startGame(mode)} />;
   }
 
 }

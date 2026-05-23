@@ -9,6 +9,8 @@ type HandViewProps = {
   onDraw: () => void;
   selectMode: 'merchant' | 'magician-self' | null;
   selectableIndexes: number[];
+  /** false のときドロー・選択を無効化（CPU手番など） */
+  interactive?: boolean;
 };
 
 export function HandView({
@@ -18,6 +20,7 @@ export function HandView({
   onDraw,
   selectMode,
   selectableIndexes,
+  interactive = true,
 }: HandViewProps) {
   const displayHand: CardDefinition[] = [...hand];
 
@@ -46,14 +49,19 @@ export function HandView({
             <CardView
               key={`${card.no}-${index}`}
               card={card}
-              onClick={() => {
-                if (card.type === 'draw') {
-                  onDraw();
-                } else {
-                  onSelect(index);
-                }
-              }}
-              highlight={highlight} // ← ★ ここに追加
+              onClick={
+                interactive
+                  ? () => {
+                      if (card.type === 'draw') {
+                        onDraw();
+                      } else {
+                        onSelect(index);
+                      }
+                    }
+                  : undefined
+              }
+              highlight={highlight}
+              dimmed={!interactive && card.type !== 'draw'}
             />
           );
         })}

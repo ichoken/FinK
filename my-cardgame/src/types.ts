@@ -5,6 +5,9 @@ import type { PlayerInfo } from './gameConfig';
 
 export type Screen = 'title' | 'game';
 
+/** debug: デバッグ用UI付き / game: 正式プレイ */
+export type GameMode = 'debug' | 'game';
+
 // カード効果の種類（今後追加していく）
 export type PendingActionKind =
   | 'merchant'

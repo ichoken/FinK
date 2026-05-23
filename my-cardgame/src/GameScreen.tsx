@@ -16,13 +16,16 @@ import { ProphetPortal } from './ProphetPortal';
 import { ProphetView } from './ProphetView';
 import { PlayerSelectModal } from './components/PlayerSelectModal'; // パスは構成に合わせて
 
-import type { CardDefinition, GameState, PendingAction, Screen } from './types';
+import type { CardDefinition, GameMode, GameState, PendingAction, Screen } from './types';
 import type { PlayerInfo } from './gameConfig';
+import { HUMAN_PLAYER_INDEX } from './gameConfig';
+import { FormalGameBoard } from './components/FormalGameBoard';
 import { Modal } from './components/Modal';
 import { CardActivationOverlay, type CardActivationPreview } from './components/CardActivationOverlay';
 
 
 type GameScreenProps = {
+    gameMode: GameMode;
     players: PlayerInfo[];
     gameState: GameState;
     activePlayerIndex: number;
@@ -66,6 +69,7 @@ type GameScreenProps = {
 
 
 export function GameScreen({
+    gameMode,
     players,
     gameState,
     activePlayerIndex,
@@ -93,6 +97,14 @@ export function GameScreen({
     actions,
 
 }: GameScreenProps) {
+    const isFormalMode = gameMode === 'game';
+    const handPlayerIndex = isFormalMode ? HUMAN_PLAYER_INDEX : activePlayerIndex;
+    const handInteractive =
+        !isFormalMode ||
+        (activePlayerIndex === HUMAN_PLAYER_INDEX &&
+            !players[HUMAN_PLAYER_INDEX].isEliminated &&
+            !gameState.gameOver);
+
     useEffect(() => {
         if (!pendingAction) return;
         if (pendingAction.kind !== 'magician') return;
@@ -185,9 +197,19 @@ export function GameScreen({
             />
 
             {/* MainLayout */}
-            <div style={{ flex: '1 1 auto', display: 'flex', minHeight: 0 }}>
-                <MainLayout>
-                    {/* Left column */}
+            <div style={{ flex: '1 1 auto', display: 'flex', minHeight: 0, position: 'relative' }}>
+                {isFormalMode && (
+                    <FormalGameBoard
+                        players={players}
+                        activePlayerIndex={activePlayerIndex}
+                        hands={gameState.hands}
+                        deckCount={gameState.deck.length}
+                        discard={gameState.discard}
+                    />
+                )}
+                <MainLayout singleColumn={isFormalMode}>
+                    {/* Left column（デバッグモードのみ） */}
+                    {!isFormalMode && (
                     <div>
                         <DeckView deck={gameState.deck} />
                         <DiscardView
@@ -204,6 +226,7 @@ export function GameScreen({
                             hands={gameState.hands}
                         />
                     </div>
+                    )}
 
                     {/* Center column */}
                     <div
@@ -510,10 +533,11 @@ export function GameScreen({
                             }}
                         >
                             <HandView
-                                hand={gameState.hands[activePlayerIndex]}
+                                hand={gameState.hands[handPlayerIndex]}
                                 selectedIndex={selectedIndex}
                                 onSelect={handleSelect}
                                 onDraw={drawOne}
+                                interactive={handInteractive}
                                 selectMode={
                                     pendingAction?.kind === 'merchant'
                                         ? 'merchant'
@@ -524,10 +548,10 @@ export function GameScreen({
                                 }
                                 selectableIndexes={
                                     pendingAction?.kind === 'merchant'
-                                        ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                                        ? gameState.hands[handPlayerIndex].map((_, i) => i)
                                         : pendingAction?.kind === 'magician' &&
                                             pendingAction.step === 'chooseSelfCard'
-                                            ? gameState.hands[activePlayerIndex].map((_, i) => i)
+                                            ? gameState.hands[handPlayerIndex].map((_, i) => i)
                                             : []
                                 }
                             />
@@ -557,10 +581,11 @@ export function GameScreen({
                             )}
                     </div>
 
-                    {/* Right column */}
+                    {/* Right column（デバッグモードのみ） */}
+                    {!isFormalMode && (
                     <div>
                         <DebugControls
-                            cards={cards} // cards は App.tsx 側で渡してもOK
+                            cards={cards}
                             handLength={gameState.hands[activePlayerIndex].length}
                             deck={gameState.deck}
                             onDebugDraw={debugDrawSpecific}
@@ -573,6 +598,7 @@ export function GameScreen({
                             activePlayerIndex={activePlayerIndex}
                         />
                     </div>
+                    )}
                 </MainLayout>
             </div>
 
@@ -588,9 +614,9 @@ export function GameScreen({
 
             {/* カード詳細モーダル */}
             {selectedIndex !== null &&
-                gameState.hands[activePlayerIndex][selectedIndex] && (() => {
+                gameState.hands[handPlayerIndex][selectedIndex] && (() => {
 
-                    const card = gameState.hands[activePlayerIndex][selectedIndex];
+                    const card = gameState.hands[handPlayerIndex][selectedIndex];
 
                     // ★ 使用不可カードの判定（FinK / 黒魔術師 / シスター）
                     const isUnusableCard =

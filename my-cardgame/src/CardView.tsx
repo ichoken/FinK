@@ -6,9 +6,10 @@ interface CardViewProps {
   onClick?: () => void;
   highlight?: boolean;
   isDragging?: boolean;
+  dimmed?: boolean;
 }
 
-export function CardView({ card, onClick, highlight = false, isDragging = false }: CardViewProps) {
+export function CardView({ card, onClick, highlight = false, isDragging = false, dimmed = false }: CardViewProps) {
   return (
     <div
       onClick={onClick}
@@ -24,6 +25,7 @@ export function CardView({ card, onClick, highlight = false, isDragging = false 
         cursor: onClick ? 'pointer' : 'default',
         boxShadow: '0 8px 20px rgba(0, 0, 0, 0.8)',
         transition: isDragging ? 'none' : 'transform 0.1s ease-out, box-shadow 0.1s ease-out',
+        opacity: dimmed ? 0.55 : 1,
       }}
     >
       {/* ★ カード画像（全面） */}
