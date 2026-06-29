@@ -16,8 +16,8 @@ export function CardView({ card, onClick, highlight = false, isDragging = false,
       role={onClick ? 'button' : undefined}
       aria-label={card.name}
       style={{
-        width: 180,
-        height: 269,
+        width: 162,
+        height: 242,
         borderRadius: 12,
         border: highlight ? '3px solid #00ff00' : '2px solid transparent',
         overflow: 'hidden',

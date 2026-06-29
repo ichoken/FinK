@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CardDefinition } from '../types';
 import type { PlayerInfo } from '../gameConfig';
+import cardBackImage from '/resource/card/00.jpg';
 
 export type CardActivationPreview = {
   sourceIndex: number;
@@ -8,6 +9,8 @@ export type CardActivationPreview = {
   card: CardDefinition;
   /** 省略時はカード発動 */
   kind?: 'activate' | 'draw';
+  /** true のとき表面・カード名を隠す（CPUドローなど） */
+  hideCardFace?: boolean;
 };
 
 type Props = {
@@ -23,6 +26,10 @@ export function CardActivationOverlay({ preview, players }: Props) {
     preview.targetIndex === undefined
       ? null
       : players[preview.targetIndex]?.name ?? `Player ${preview.targetIndex}`;
+
+  const hideFace = preview.hideCardFace === true;
+  const cardImage = hideFace ? cardBackImage : preview.card.image;
+  const cardLabel = hideFace ? '???' : preview.card.name;
 
   return (
     <div
@@ -51,8 +58,8 @@ export function CardActivationOverlay({ preview, players }: Props) {
       >
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <img
-            src={preview.card.image}
-            alt={preview.card.name}
+            src={cardImage}
+            alt={hideFace ? 'カード背面' : preview.card.name}
             style={{
               width: 112,
               height: 156,
@@ -69,7 +76,7 @@ export function CardActivationOverlay({ preview, players }: Props) {
               {preview.kind === 'draw' ? 'ドロー' : 'カード発動'}
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>
-              {preview.card.name}
+              {cardLabel}
             </div>
 
             <div

@@ -178,14 +178,16 @@ export default function App() {
     sourceIndex: number,
     targetIndex?: number,
     kind: 'activate' | 'draw' = 'activate',
+    hideCardFace = false,
   ) => {
-    setActivationPreview({ card, sourceIndex, targetIndex, kind });
+    setActivationPreview({ card, sourceIndex, targetIndex, kind, hideCardFace });
     await sleep(kind === 'draw' ? 1500 : 2000);
     setActivationPreview(null);
   };
 
   const showDrawOverlay = async (card: CardDefinition, playerIndex: number) => {
-    await showActivation(card, playerIndex, undefined, 'draw');
+    const hideFace = playersRef.current[playerIndex]?.kind === 'cpu';
+    await showActivation(card, playerIndex, undefined, 'draw', hideFace);
   };
 
   const showActivationByNo = async (cardNo: number, sourceIndex: number, targetIndex?: number) => {
